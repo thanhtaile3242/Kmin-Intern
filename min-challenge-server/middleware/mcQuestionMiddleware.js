@@ -60,15 +60,17 @@ export const checkEmptyMCQ = (req, res, next) => {
         next();
     }
 };
-
+//
 export const checkQuestionExistent = (req, res, next) => {
-    const question_uid = req.body.question_uid.trim();
+    const question_uid = req.body[0].question_uid;
+    let question_uid_trim = question_uid.trim();
     let q = `select \`uid\` from question where account_uid = UUID_TO_BIN('${req.userId}')`;
     db.query(q, (error, result) => {
         let listQuestion = result.filter((question) => {
-            return question.uid === question_uid;
+            return question.uid === question_uid_trim;
         });
         if (listQuestion.length != 0) {
+            req.question_uid = question_uid_trim;
             next();
         } else {
             return res.status(401).json({ error: "Question is not existent" });

@@ -30,15 +30,45 @@ export const handleCreateMCQ = (req, res) => {
 export const handleDeleteMCQ = (req, res) => {
     const question_uid = req.body.question_uid.trim();
     const querryDeleteQ = `UPDATE question SET \`is_deleted\` = 1 WHERE \`uid\` = '${question_uid}'`;
-    db.query(querryDeleteQ);
-    const querryDeleteA = `UPDATE answer SET \`is_deleted\` = 1 WHERE \`mc_question_uid\` = '${question_uid}'`;
-    db.query(querryDeleteA, (err, result) => {
-        if (err) {
-            return res.status(401).json({ error: "Error soft-deleting user" });
-        } else {
-            return res
-                .status(200)
-                .json({ message: "User soft-deleted successfully." });
-        }
+    db.query(querryDeleteQ, () => {
+        const querryDeleteA = `UPDATE answer SET \`is_deleted\` = 1 WHERE \`mc_question_uid\` = '${question_uid}'`;
+        db.query(querryDeleteA, (err, result) => {
+            if (err) {
+                return res
+                    .status(401)
+                    .json({ error: "Error soft-deleting user" });
+            } else {
+                return res
+                    .status(200)
+                    .json({ message: "User soft-deleted successfully." });
+            }
+        });
     });
+};
+// Controller for updating a question
+export const handleUpdateMCQ = (req, res) => {
+    try {
+        const question_uid = req.question_uid;
+        const payload = req.body[0];
+
+        // question table
+        const { name, descriptionQ } = payload;
+        const queryQ = `UPDATE question SET name = '${name}', description = '${descriptionQ}' WHERE uid = '${question_uid}'`;
+        db.execute(queryQ);
+
+        // answer table
+        const queryA1 = `DELETE FROM answer WHERE mc_question_uid = '${question_uid}'`;
+        db.execute(queryA1, () => {
+            const { answers } = payload;
+            for (const answer of answers) {
+                const { order_answer, description, correct } = answer;
+                const insertSql = `INSERT INTO answer (\`mc_question_uid\`, \`uid\`, \`description\`, \`correct\`, \`order_answer\` ) VALUES ('${question_uid}', UUID(), '${description}', '${correct}', '${order_answer}')`;
+                db.execute(insertSql);
+            }
+            res.status(200).json({ message: "Question updated successfully" });
+        });
+    } catch (error) {
+        console.error("Error updating question:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 };

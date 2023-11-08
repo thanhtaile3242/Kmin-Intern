@@ -9,6 +9,7 @@ import {
 import {
     handleCreateMCQ,
     handleDeleteMCQ,
+    handleUpdateMCQ,
 } from "../controllers/mcQuestionController.js";
 
 // API create Multiple choice question
@@ -17,12 +18,17 @@ router.post(
     [checkValidToken, checkEmptyMCQ],
     handleCreateMCQ
 );
-
 // API delete a question (soft-delete)
 router.delete(
     "/delete",
     [checkValidToken, checkQuestionExistent],
     handleDeleteMCQ
+);
+// API update a question
+router.put(
+    "/edit",
+    [checkValidToken, checkEmptyMCQ, checkQuestionExistent],
+    handleUpdateMCQ
 );
 
 export default router;
