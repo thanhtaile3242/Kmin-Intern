@@ -28,5 +28,6 @@ router.delete(
 // [checkValidToken, checkEmptyMCQ, checkQuestionExistent]
 // [checkValidToken, checkQuestionExistent],
 router.put("/edit", checkValidToken, handleUpdateMCQ);
+
 router.post("/abc", checkValidToken);
 export default router;

@@ -25,7 +25,7 @@ export const validateUserSignUp = [
         }
         next(); // No validation errors, proceed to the next middleware or route
     },
-];
+]; // (pending)
 
 export const checkExistentAccount = async (req, res, next) => {
     const { username, email } = req.body;
@@ -53,13 +53,13 @@ export const checkExistentAccount = async (req, res, next) => {
     }
     // If neither username nor email exists, call next() to proceed
     next();
-};
+}; // (pending)
 
 // Middleware for Sign In API
 export const validateUserSignIn = async (req, res, next) => {
     const { signinName } = req.body;
     // Check if the inputString matches either email or username
-    const query = `SELECT * FROM account WHERE email = '${signinName}' OR username = '${signinName}'`;
+    const query = `SELECT * FROM account WHERE email = '${signinName.trim()}' OR username = '${signinName.trim()}'`;
     try {
         const [results] = await db.execute(query);
         if (results.length === 0) {
@@ -71,4 +71,4 @@ export const validateUserSignIn = async (req, res, next) => {
     } catch (error) {
         return res.status(500).json({ error: "Database error" });
     }
-};
+}; // (pending)

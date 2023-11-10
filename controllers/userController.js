@@ -9,7 +9,6 @@ import { getInsertQuery } from "../utils/structure.js";
 const redis = new Redis();
 // For generate a uuid key
 const SECRET_UUID = uuidv4();
-
 export const handleSignUp = async (req, res) => {
     const { username, email, password } = req.body;
     try {
@@ -27,7 +26,7 @@ export const handleSignUp = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: "Internal server error" });
     }
-};
+}; // pending
 
 export const handleSignIn = async (req, res) => {
     const { user, body } = req;
@@ -69,4 +68,4 @@ export const handleSignIn = async (req, res) => {
             return res.status(401).json({ error: "Wrong password" });
         }
     });
-};
+}; // pendings

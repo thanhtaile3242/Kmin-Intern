@@ -4,26 +4,23 @@ import { stringify as uuidStringify } from "uuid";
 
 export const checkValidToken = async (req, res, next) => {
     try {
-        // Get the 'Authorization' header
+        // Get the 'Authorization' key from header
         const authHeader = req.headers.authorization;
-
+        // Check the received token
         if (!authHeader) {
             return res.status(401).json({ error: "No token provided" });
         }
 
         const tokenParts = authHeader.split(" ");
-
         if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
             return res.status(401).json({ error: "Invalid token format" });
         }
 
         const tokenValue = tokenParts[1];
-
         // Verify and Decode Creator UID from token using async/await
         const decodedData = await jwt.verify(tokenValue, "LTT-secret-key");
-        console.log(decodedUUID);
         // Attach userId to req object
-        req.userId = uuidStringify(decodedUUID.userId);
+        req.userId = decodedData.userId;
         next();
     } catch (error) {
         if (error.name === "TokenExpiredError") {
@@ -33,55 +30,68 @@ export const checkValidToken = async (req, res, next) => {
             return res.status(500).json({ error: "Internal Server Error" });
         }
     }
-};
+}; //
 
 export const checkEmptyMCQ = (req, res, next) => {
+    // Extract the list question
     const listQuestion = req.body;
-    // Function for checking null value
-    function hasEmptyValue(obj) {
-        for (const key in obj) {
-            if (obj[key] === "") {
-                return true;
-            }
-            if (typeof obj[key] === "object") {
-                if (hasEmptyValue(obj[key])) {
-                    return true;
+    // Function for checking "" value of an array
+    function hasEmptyStringProperty(array) {
+        // Helper function to check if an object has any property with an empty string
+        function checkObject(obj) {
+            for (const key in obj) {
+                if (typeof obj[key] === "string" && obj[key] === "") {
+                    return true; // Found an empty string
+                } else if (typeof obj[key] === "object" && obj[key] !== null) {
+                    // Recursively check nested objects and arrays
+                    if (checkObject(obj[key])) {
+                        return true;
+                    }
                 }
             }
+            return false;
         }
-        return false;
-    }
 
-    let hasEmptyValueFlag = false;
-    for (const question of listQuestion) {
-        if (hasEmptyValue(question)) {
-            hasEmptyValueFlag = true;
-            break;
+        // Iterate through the array and check each object
+        for (const item of array) {
+            if (checkObject(item)) {
+                return true; // Found an object with an empty string property
+            }
         }
+        return false; // No empty string properties found
     }
-
-    if (hasEmptyValueFlag) {
+    // Create the flag
+    const isNullValueFlag = hasEmptyStringProperty(listQuestion);
+    if (isNullValueFlag) {
         return res
             .status(401)
             .json({ error: "Error: Some properties have empty string values" });
     } else {
         next();
     }
-};
-//
-export const checkQuestionExistent = (req, res, next) => {
-    const question_uid = req.body[0].question_uid;
-    let question_uid_trim = question_uid.trim();
-    let q = `select \`uid\` from question where account_uid = UUID_TO_BIN('${req.userId}')`;
-    db.query(q, (error, result) => {
-        let listQuestion = result.filter((question) => {
-            return question.uid === question_uid_trim;
-        });
-        if (listQuestion.length != 0) {
-            req.question_uid = question_uid_trim;
+}; //
+
+export const checkQuestionExistent = async (req, res, next) => {
+    const question_uid = req.body.question_uid.trim();
+
+    // Prepare the query using placeholders for parameters
+    let query = `SELECT * FROM question WHERE uid =  '${question_uid}'`;
+
+    try {
+        // Execute the query with the question_uid parameter
+        let [result, fields] = await db.execute(query);
+
+        if (result.length !== 0) {
+            // If the question exists, attach the question_uid to the request object and call next middleware
+            req.question_uid = question_uid;
             next();
         } else {
+            // If the question does not exist, return an error response
             return res.status(401).json({ error: "Question is not existent" });
         }
-    });
-};
+    } catch (error) {
+        // If there's an error during the database operation, catch it and return an error response
+        console.error(error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}; //

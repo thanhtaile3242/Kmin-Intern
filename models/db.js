@@ -17,11 +17,14 @@ import * as dotenv from "dotenv";
 import mysql from "mysql2/promise";
 
 dotenv.config();
-const db = await mysql.createPool({
+const pool = await mysql.createPool({
     host: "localhost",
     user: "root",
     port: "3306",
     password: "123456789",
     database: "kmin2",
 });
+
+const db = await pool.getConnection();
+
 export default db;
