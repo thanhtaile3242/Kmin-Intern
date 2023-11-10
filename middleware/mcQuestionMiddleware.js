@@ -20,10 +20,10 @@ export const checkValidToken = async (req, res, next) => {
         const tokenValue = tokenParts[1];
 
         // Verify and Decode Creator UID from token using async/await
-        const decoded = await jwt.verify(tokenValue, "LTT-secret-key");
-
-        // Parse userId
-        req.userId = uuidStringify(decoded.userId.data);
+        const decodedData = await jwt.verify(tokenValue, "LTT-secret-key");
+        console.log(decodedUUID);
+        // Attach userId to req object
+        req.userId = uuidStringify(decodedUUID.userId);
         next();
     } catch (error) {
         if (error.name === "TokenExpiredError") {
