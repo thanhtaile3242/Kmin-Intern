@@ -63,180 +63,20 @@ export const handleDeleteMCQ = async (req, res) => {
     }
 }; //
 
-// Controller for updating a question
-// export const handleUpdateMCQ = (req, res) => {
-// try {
-//     const question_uid = req.question_uid;
-//     const payload = req.body[0];
-
-//     // question table
-//     const { name, descriptionQ } = payload;
-//     const queryQ = `UPDATE question SET name = '${name}', description = '${descriptionQ}' WHERE uid = '${question_uid}'`;
-//     db.execute(queryQ);
-
-//     // answer table
-//     const queryA1 = `DELETE FROM answer WHERE mc_question_uid = '${question_uid}'`;
-//     db.execute(queryA1, () => {
-//         const { answers } = payload;
-//         for (const answer of answers) {
-//             const { order_answer, description, correct } = answer;
-//             const insertSql = `INSERT INTO answer (\`mc_question_uid\`, \`uid\`, \`description\`, \`correct\`, \`order_answer\` ) VALUES ('${question_uid}', UUID(), '${description}', '${correct}', '${order_answer}')`;
-//             db.execute(insertSql);
-//         }
-//         res.status(200).json({ message: "Question updated successfully" });
-//     });
-// } catch (error) {
-//     console.error("Error updating question:", error);
-//     res.status(500).json({ error: "Internal Server Error" });
-// }
-//     const question_uid = req.question_uid;
-//     const query = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}'`;
-//     db.execute(query, (error, result) => {
-//         if (error) {
-//             return res.send("Lỗi 123");
-//         }
-//         const newList = req.body[0].answers;
-//         newList.forEach((newAnswer) => {
-//             // Use REPLACE INTO to update or insert data into the answer table
-//             const sql = `
-//               REPLACE INTO answer (\`mc_question_uid\`,\`uid\`,\`description\`, \`correct\`,\`order_answer\`)
-//               VALUES ('${question_uid}', '${newAnswer.uid}', '${newAnswer.description}','${newAnswer.correct}','${newAnswer.order_answer}')
-//             `;
-
-//             db.execute(sql);
-//         });
-//     });
-// };
-
-// Demo 1
-// export const handleUpdateMCQ = (req, res) => {
-//     const question_uid = req.question_uid;
-//     const query = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}'`;
-//     db.execute(query, (error, result) => {
-//         if (error) {
-//             return res.status(500).send("LỖI");
-//         }
-//         // Get newList (client send) and currentList (database)
-//         const newList = req.body[0].answers;
-//         const currentList = result;
-//         // Get the not-existent answers (uid) ...
-//         const uniqueIds = new Set(newList.map((item) => item.uid));
-//         const DeletedList = currentList.filter(
-//             (item) => !uniqueIds.has(item.uid)
-//         ); // (for delete)
-
-//         let completedOperations = 0;
-//         newList.forEach((newAnswer) => {
-//             const sql = `
-//           REPLACE INTO answer (\`mc_question_uid\`,\`uid\`,\`description\`, \`correct\`,\`order_answer\`)
-//           VALUES ('${question_uid}', '${newAnswer.uid}', '${newAnswer.description}','${newAnswer.correct}','${newAnswer.order_answer}')
-//         `;
-//             db.execute(sql, (error, result) => {
-//                 completedOperations++;
-//                 if (error) {
-//                     // Handle the error if needed, but don't send the response here
-//                 }
-//                 // Check if all operations are completed before sending the response
-//                 if (completedOperations === newList.length) {
-//                     if (DeletedList.length != 0) {
-//                         // Xóa các answer tồn tại trong database nhưng không tồn tại trong client data
-//                         let completedOperations2 = 0;
-//                         DeletedList.forEach((answerDelete) => {
-//                             const sql2 = `DELETE FROM answer WHERE uid = '${answerDelete.uid}'`;
-//                             db.execute(sql2, (error, result) => {
-//                                 completedOperations2++;
-//                                 if (error) {
-//                                 }
-//                                 if (
-//                                     completedOperations2 == DeletedList.length
-//                                 ) {
-//                                     return res.send("OK1!!!");
-//                                 }
-//                             });
-//                         });
-//                     } else {
-//                         return res.send("OK2!!!");
-//                     }
-//                 }
-//             });
-//         });
-//         res.send("AAAAAA");
-//     });
-// };
-// Demo 2
+// Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
-    const question_uid = req.question_uid;
-    const query = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}'`;
-    db.execute(query, (error, result) => {
-        if (error) {
-            return res.status(500).send("LỖI");
-        }
-        // Get the one newList (client send) and currentList (database)
-        const newList = req.body[0].answers;
-        const currentList = result;
-        // Get the not-existent answers (uid) ...
-        const uniqueIds = new Set(newList.map((item) => item.uid));
-        const DeletedList = currentList.filter(
-            (item) => !uniqueIds.has(item.uid)
-        ); // (for delete)
-        const notUIDList = newList.filter((item) => item.uid == "");
-        // if (notUIDList.length != 0) {
-        // }
-        notUIDList.map((item) => (item.uid = uuidv4()));
-
-        newList = [...newList, ...notUIDList];
-        console.log(newList);
-        let completedOperations = 0;
-        newList.forEach((newAnswer) => {
-            const sql = `
-          REPLACE INTO answer (\`mc_question_uid\`,\`uid\`,\`description\`, \`correct\`,\`order_answer\`)
-          VALUES ('${question_uid}', '${newAnswer.uid}', '${newAnswer.description}','${newAnswer.correct}','${newAnswer.order_answer}')
-        `;
-            db.execute(sql, (error, result) => {
-                completedOperations++;
-                if (error) {
-                    // Handle the error if needed, but don't send the response here
-                }
-                // Check if all operations are completed before sending the response
-                if (completedOperations === newList.length) {
-                    if (DeletedList.length != 0) {
-                        // Xóa các answer tồn tại trong database nhưng không tồn tại trong client data
-                        let completedOperations2 = 0;
-                        DeletedList.forEach((answerDelete) => {
-                            const sql2 = `DELETE FROM answer WHERE uid = '${answerDelete.uid}'`;
-                            db.execute(sql2, (error, result) => {
-                                completedOperations2++;
-                                if (error) {
-                                }
-                                if (
-                                    completedOperations2 == DeletedList.length
-                                ) {
-                                    return res.send("OK1!!!");
-                                }
-                            });
-                        });
-                    } else {
-                        return res.send("OK2!!!");
-                    }
-                }
-            });
-        });
-    });
-};
-
-// // Assuming you have required the mysql2 library
-export const handleUpdateMCQ2 = async (req, res) => {
     const newQuestion = req.body[0];
-    // get current list from database (question_uid = 2a795f09-0ef4-4022-983e-39be59e534d3)
     const question_uid = newQuestion.question_uid;
 
     try {
+        // Update question
+        const query = `UPDATE question SET name = '${newQuestion.name}', description = '${newQuestion.descriptionQ}' WHERE uid = '${newQuestion.question_uid}'`;
+        await db.execute(query);
+        // Update answer
         const query1 = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}' and is_deleted = '0'`;
-        const [result1, field1] = await db.execute(query1);
-
-        // Get list of answers from newData and currentData
-        const currentAnswersList = [...result1];
-        let newAnswersList = newQuestion.answers;
+        // Get lists of answers from newData and currentData
+        const [currentAnswersList] = await db.execute(query1); //From database
+        let newAnswersList = newQuestion.answers; // From client-side
 
         // Get list of uuid from newAnswersList and currentAnswersList
         const uuidOfNewList = new Set(newAnswersList.map((item) => item.uid));
@@ -248,21 +88,24 @@ export const handleUpdateMCQ2 = async (req, res) => {
             const NotHavingUid = newAnswersList.filter(
                 (item) => !uuidOfCurrentList.has(item.uid)
             );
-            const HavingUid = newAnswersList.filter((item) =>
+            const havingUid = newAnswersList.filter((item) =>
                 uuidOfCurrentList.has(item.uid)
             );
-            let a = NotHavingUid.map((obj) => ({
+            let newUidAnswers = NotHavingUid.map((obj) => ({
                 ...obj,
                 uid: uuidv4(),
             }));
-            newAnswersList = [...HavingUid, ...a];
+            newAnswersList = [...havingUid, ...newUidAnswers];
             for (const newAnswer of newAnswersList) {
                 const query2 = `
                 REPLACE INTO answer (\`mc_question_uid\`,\`uid\`,\`description\`, \`correct\`,\`order_answer\`)
                 VALUES ('${question_uid}', '${newAnswer.uid}', '${newAnswer.description}','${newAnswer.correct}','${newAnswer.order_answer}')
               `;
-                const [result, field] = await db.execute(query2);
+                await db.execute(query2);
             }
+            return res
+                .status(200)
+                .json({ message: "Answers updated and new answers added." });
         }
         // Trường hợp 2: newAnswerList < currentAnswerList
         if (newAnswersList.length < currentAnswersList.length) {
@@ -270,26 +113,33 @@ export const handleUpdateMCQ2 = async (req, res) => {
                 (item) => !uuidOfNewList.has(item.uid)
             );
 
-            try {
-                for (const newAnswer of newAnswersList) {
-                    const query3 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
-                    await db.execute(query3);
-                }
+            for (const newAnswer of newAnswersList) {
+                const query3 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
+                await db.execute(query3);
+            }
 
-                for (const deletedAnswer of deletedAnswersList) {
-                    const query4 = `UPDATE answer SET is_deleted = 1 WHERE uid = '${deletedAnswer.uid}'`;
-                    const [result, field] = await db.execute(query4);
-                }
-            } catch (error) {}
+            for (const deletedAnswer of deletedAnswersList) {
+                const query4 = `UPDATE answer SET is_deleted = 1 WHERE uid = '${deletedAnswer.uid}'`;
+                await db.execute(query4);
+            }
+            return res.status(200).json({
+                message:
+                    "Answers updated and surplus answers marked as deleted.",
+            });
         }
         // Trường hợp 3: newAnswerList = currentAnswerList
-        if (newAnswersList.length == currentAnswersList.length) {
+        if (newAnswersList.length === currentAnswersList.length) {
             for (const newAnswer of newAnswersList) {
                 const query5 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
                 await db.execute(query5);
             }
+            return res.status(200).json({ message: "Answers updated." });
         }
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "An error occurred while updating answers.",
+            error: error.message,
+        });
     }
 };
