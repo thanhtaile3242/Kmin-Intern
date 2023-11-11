@@ -225,19 +225,71 @@ export const handleUpdateMCQ = async (req, res) => {
 };
 
 // // Assuming you have required the mysql2 library
-// export const handleUpdateMCQ = async (req, res) => {
-//     console.log(typeof req.body);
-//     res.send("AAA");
-//     // try {
-//     //     const query1 = `SELECT * FROM answer WHERE correct = '0'`;
+export const handleUpdateMCQ2 = async (req, res) => {
+    const newQuestion = req.body[0];
+    // get current list from database (question_uid = 2a795f09-0ef4-4022-983e-39be59e534d3)
+    const question_uid = newQuestion.question_uid;
 
-//     //     // Using pool.query() directly, which returns a promise
-//     //     const [result, fields] = await db.query(query1);
+    try {
+        const query1 = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}' and is_deleted = '0'`;
+        const [result1, field1] = await db.execute(query1);
 
-//     //     console.log(result);
-//     //     res.send("Ok");
-//     // } catch (error) {
-//     //     console.error(error);
-//     //     res.send("fail");
-//     // }
-// };
+        // Get list of answers from newData and currentData
+        const currentAnswersList = [...result1];
+        let newAnswersList = newQuestion.answers;
+
+        // Get list of uuid from newAnswersList and currentAnswersList
+        const uuidOfNewList = new Set(newAnswersList.map((item) => item.uid));
+        const uuidOfCurrentList = new Set(
+            currentAnswersList.map((item) => item.uid)
+        );
+        // Trường hợp 1: newAnswersList > currentAnswersList
+        if (newAnswersList.length > currentAnswersList.length) {
+            const NotHavingUid = newAnswersList.filter(
+                (item) => !uuidOfCurrentList.has(item.uid)
+            );
+            const HavingUid = newAnswersList.filter((item) =>
+                uuidOfCurrentList.has(item.uid)
+            );
+            let a = NotHavingUid.map((obj) => ({
+                ...obj,
+                uid: uuidv4(),
+            }));
+            newAnswersList = [...HavingUid, ...a];
+            for (const newAnswer of newAnswersList) {
+                const query2 = `
+                REPLACE INTO answer (\`mc_question_uid\`,\`uid\`,\`description\`, \`correct\`,\`order_answer\`)
+                VALUES ('${question_uid}', '${newAnswer.uid}', '${newAnswer.description}','${newAnswer.correct}','${newAnswer.order_answer}')
+              `;
+                const [result, field] = await db.execute(query2);
+            }
+        }
+        // Trường hợp 2: newAnswerList < currentAnswerList
+        if (newAnswersList.length < currentAnswersList.length) {
+            const deletedAnswersList = currentAnswersList.filter(
+                (item) => !uuidOfNewList.has(item.uid)
+            );
+
+            try {
+                for (const newAnswer of newAnswersList) {
+                    const query3 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
+                    await db.execute(query3);
+                }
+
+                for (const deletedAnswer of deletedAnswersList) {
+                    const query4 = `UPDATE answer SET is_deleted = 1 WHERE uid = '${deletedAnswer.uid}'`;
+                    const [result, field] = await db.execute(query4);
+                }
+            } catch (error) {}
+        }
+        // Trường hợp 3: newAnswerList = currentAnswerList
+        if (newAnswersList.length == currentAnswersList.length) {
+            for (const newAnswer of newAnswersList) {
+                const query5 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
+                await db.execute(query5);
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};

@@ -9,7 +9,7 @@ import {
 import {
     handleCreateMCQ,
     handleDeleteMCQ,
-    handleUpdateMCQ,
+    handleUpdateMCQ2,
 } from "../controllers/mcQuestionController.js";
 
 // API create Multiple choice question
@@ -27,7 +27,7 @@ router.delete(
 // API update a question
 // [checkValidToken, checkEmptyMCQ, checkQuestionExistent]
 // [checkValidToken, checkQuestionExistent],
-router.put("/edit", checkValidToken, handleUpdateMCQ);
+// router.put("/edit", checkValidToken, handleUpdateMCQ);
 
-router.post("/abc", checkValidToken);
+router.post("/abc", handleUpdateMCQ2);
 export default router;
