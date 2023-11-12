@@ -1,7 +1,11 @@
 import jwt from "jsonwebtoken";
 import db from "../models/db.js";
 import { stringify as uuidStringify } from "uuid";
-
+import {
+    removeSpecialCharactersAndTrim,
+    removeVietnameseDiacritics,
+} from "../utils/utils_MCQ.js";
+// Middleware for multiple choice questions
 export const checkValidToken = async (req, res, next) => {
     try {
         // Get the 'Authorization' key from header
@@ -93,5 +97,18 @@ export const checkQuestionExistent = async (req, res, next) => {
         // If there's an error during the database operation, catch it and return an error response
         console.error(error);
         return res.status(500).json({ error: "Internal server error" });
+    }
+}; //
+
+export const checkFilterEmpty = (req, res, next) => {
+    // Handle keyword
+    let keyWord = req.body.keyword;
+    keyWord = removeSpecialCharactersAndTrim(keyWord);
+    keyWord = removeVietnameseDiacritics(keyWord);
+    if (!keyWord) {
+        return res.status(400).json({ error: "Empty keyword provided." });
+    } else {
+        req.keyword = keyWord;
+        next();
     }
 }; //

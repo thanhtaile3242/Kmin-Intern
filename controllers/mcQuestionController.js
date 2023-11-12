@@ -1,5 +1,11 @@
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
+import {
+    removeVietnameseDiacritics,
+    generateCollateQuery,
+    countMatching,
+} from "../utils/utils_MCQ.js";
+
 // Controller for API create MCQ
 export const handleCreateMCQ = async (req, res) => {
     try {
@@ -141,5 +147,64 @@ export const handleUpdateMCQ = async (req, res) => {
             message: "An error occurred while updating answers.",
             error: error.message,
         });
+    }
+}; //
+
+// Controller for API search MCQ by KeyWord
+export const handleSearchMCQbyKeyword = async (req, res) => {
+    // Get keyword for Search feature
+    const keyWord = req.keyword;
+    try {
+        // Generate SQL query
+        const query = generateCollateQuery(keyWord);
+        let [currentList, field] = await db.execute(query);
+
+        // Transform the current list of questions got from database
+        currentList = currentList.map((obj) => {
+            return {
+                ...obj,
+                full_name: removeVietnameseDiacritics(
+                    obj.full_name
+                ).toLowerCase(),
+            };
+        });
+
+        // Filter and Ranking the order of the questions in result
+        // First step
+        let filterList = [];
+        let scores = [];
+
+        for (let item of currentList) {
+            const fullName = item.full_name;
+            const score = countMatching(keyWord, fullName);
+
+            // If the keyword is similar to fullName, add the item to the array
+            if (score > 0) {
+                scores.push(score);
+                filterList.push(item);
+            }
+        }
+
+        // Second step
+        const combinedArray = scores.map((value, index) => ({
+            score: value,
+            question: filterList[index],
+        }));
+
+        combinedArray.sort((a, b) => b.score - a.score);
+        combinedArray.forEach((item) => {
+            delete item.score;
+        });
+
+        // Get the final list
+        let finalList = combinedArray.map((item) => item.question);
+        finalList.forEach((item) => {
+            delete item.full_name;
+        });
+
+        res.status(200).json(finalList);
+    } catch (error) {
+        console.error("Error in search endpoint:", error);
+        res.status(500).json({ error: "Internal server error." });
     }
 }; //
