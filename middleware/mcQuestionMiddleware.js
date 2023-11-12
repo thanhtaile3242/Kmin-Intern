@@ -37,7 +37,6 @@ export const checkValidToken = async (req, res, next) => {
 }; //
 
 export const checkEmptyMCQ = (req, res, next) => {
-    let question_uid = req.params.id.trim();
     // Extract the list question
     const listQuestion = req.body;
     // Function for checking "" value of an array
@@ -72,7 +71,6 @@ export const checkEmptyMCQ = (req, res, next) => {
             .status(401)
             .json({ error: "Error: Some properties have empty string values" });
     } else {
-        req.question_uid = question_uid;
         next();
     }
 }; //
@@ -88,7 +86,6 @@ export const checkQuestionExistent = async (req, res, next) => {
 
         if (result.length !== 0) {
             // If the question exists, attach the question_uid to the request object and call next middleware
-            req.question_uid = question_uid;
             next();
         } else {
             // If the question does not exist, return an error response
@@ -109,7 +106,7 @@ export const checkFilterEmpty = (req, res, next) => {
     if (!keyWord) {
         return res.status(400).json({ error: "Empty keyword provided." });
     } else {
-        req.keyword = keyWord;
+        req.keyWord = keyWord;
         next();
     }
 }; //

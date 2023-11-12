@@ -14,22 +14,35 @@ export const removeVietnameseDiacritics = (str) => {
         .join("");
 };
 // Generate SQL Collate query
-export const generateCollateQuery = (keyword) => {
+export const generateCollateQuery = (keyword, limit, offset) => {
     const keywords = keyword.split(" ");
 
     const conditionClauses = keywords
         .map((kw) => `full_name COLLATE utf8mb4_unicode_ci LIKE '%${kw}%'`)
         .join(" AND ");
-
-    const sqlQuery = `
-        SELECT uid, description, name, full_name
+    let sqlQuery = ``;
+    if (limit && offset) {
+        sqlQuery = `
+        SELECT uid, description, name, full_name, tag
         FROM (
-            SELECT uid, description, name, CONCAT(name, " ", description) AS full_name
+            SELECT uid, description, name, tag, CONCAT(name, " ", description, " ", tag) AS full_name
+            FROM question
+            WHERE is_deleted = "0" LIMIT ${limit} OFFSET ${offset}
+        ) AS subquery
+        WHERE ${conditionClauses};
+    `;
+    } else {
+        sqlQuery = `
+        SELECT uid, description, name, full_name, tag
+        FROM (
+            SELECT uid, description, name, tag, CONCAT(name, " ", description, " ", tag) AS full_name
             FROM question
             WHERE is_deleted = "0"
         ) AS subquery
         WHERE ${conditionClauses};
     `;
+    }
+    console.log(sqlQuery);
 
     return sqlQuery;
 };

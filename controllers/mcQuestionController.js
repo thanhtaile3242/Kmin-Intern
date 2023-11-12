@@ -14,11 +14,11 @@ export const handleCreateMCQ = async (req, res) => {
         const listQuestion = req.body;
         // The loop for inserting the list of questions
         for (const question of listQuestion) {
-            const { name, descriptionQ } = question;
+            const { name, description, tag } = question;
             // Create uuid for each question (Also use for answers of this question)
             const uuidQuestion = uuidv4();
             // Insert each question into question table
-            const queryQuestion = `INSERT INTO question (\`uid\`,\`account_uid\`,\`question_type_id\`,\`name\`,\`description\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${descriptionQ}')`;
+            const queryQuestion = `INSERT INTO question (\`uid\`,\`account_uid\`,\`question_type_id\`,\`name\`,\`description\`, \`tag\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${description}','${tag}')`;
             await db.execute(queryQuestion);
             // Insert each answer into answer table
             for (const answer of question.answers) {
@@ -38,7 +38,7 @@ export const handleCreateMCQ = async (req, res) => {
 
 // Controller for API delete MCQ (soft-delete)
 export const handleDeleteMCQ = async (req, res) => {
-    const question_uid = req.question_uid.trim();
+    const question_uid = req.params.id.trim();
 
     // Prepare the queries using placeholders for parameters
     const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE uid = '${question_uid}'`;
@@ -73,11 +73,11 @@ export const handleDeleteMCQ = async (req, res) => {
 // Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
     const newQuestion = req.body[0];
-    const question_uid = req.question_uid;
+    const question_uid = req.params.id.trim();
 
     try {
         // Update question
-        const query = `UPDATE question SET name = '${newQuestion.name}', description = '${newQuestion.descriptionQ}' WHERE uid = '${newQuestion.question_uid}'`;
+        const query = `UPDATE question SET name = '${newQuestion.name}', description = '${newQuestion.description}' WHERE uid = '${newQuestion.question_uid}'`;
         await db.execute(query);
         // Update answer
         const query1 = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}' and is_deleted = '0'`;
@@ -154,72 +154,140 @@ export const handleUpdateMCQ = async (req, res) => {
 // Controller for API search MCQ by KeyWord
 export const handleSearchMCQbyKeyword = async (req, res) => {
     // Get keyword for Search feature
-    const keyWord = req.keyword;
+    const keyWord = req.keyWord;
+    const page = req.query.page;
+    const limit = req.query.limit;
     try {
-        // Generate SQL query
-        const query = generateCollateQuery(keyWord);
-        let [currentList, field] = await db.execute(query);
+        if (page && limit) {
+            const offset = (page - 1) * limit;
 
-        // Transform the current list of questions got from database
-        currentList = currentList.map((obj) => {
-            return {
-                ...obj,
-                full_name: removeVietnameseDiacritics(
-                    obj.full_name
-                ).toLowerCase(),
-            };
-        });
+            // Generate SQL query
+            const query = generateCollateQuery(keyWord, limit, offset);
+            let [currentList, field] = await db.execute(query);
 
-        // Filter and Ranking the order of the questions in result
-        // First step
-        let filterList = [];
-        let scores = [];
+            // Transform the current list of questions got from database
+            currentList = currentList.map((obj) => {
+                return {
+                    ...obj,
+                    full_name: removeVietnameseDiacritics(
+                        obj.full_name
+                    ).toLowerCase(),
+                };
+            });
 
-        for (let item of currentList) {
-            const fullName = item.full_name;
-            const score = countMatching(keyWord, fullName);
+            // Filter and Ranking the order of the questions in result
+            // First step
+            let filterList = [];
+            let scores = [];
 
-            // If the keyword is similar to fullName, add the item to the array
-            if (score > 0) {
-                scores.push(score);
-                filterList.push(item);
+            for (let item of currentList) {
+                const fullName = item.full_name;
+                const score = countMatching(keyWord, fullName);
+
+                // If the keyword is similar to fullName, add the item to the array
+                if (score > 0) {
+                    scores.push(score);
+                    filterList.push(item);
+                }
             }
+
+            // Second step
+            const combinedArray = scores.map((value, index) => ({
+                score: value,
+                question: filterList[index],
+            }));
+
+            combinedArray.sort((a, b) => b.score - a.score);
+            combinedArray.forEach((item) => {
+                delete item.score;
+            });
+
+            // Get the final list
+            let finalList = combinedArray.map((item) => item.question);
+            finalList.forEach((item) => {
+                delete item.full_name;
+            });
+
+            return res.status(200).json(finalList);
+        } else {
+            // Generate SQL query
+            const query = generateCollateQuery(keyWord);
+
+            let [currentList, field] = await db.execute(query);
+            console.log(currentList);
+            // Transform the current list of questions got from database
+            currentList = currentList.map((obj) => {
+                return {
+                    ...obj,
+                    full_name: removeVietnameseDiacritics(
+                        obj.full_name
+                    ).toLowerCase(),
+                };
+            });
+
+            // Filter and Ranking the order of the questions in result
+            // First step
+            let filterList = [];
+            let scores = [];
+
+            for (let item of currentList) {
+                const fullName = item.full_name;
+                const score = countMatching(keyWord, fullName);
+
+                // If the keyword is similar to fullName, add the item to the array
+                if (score > 0) {
+                    scores.push(score);
+                    filterList.push(item);
+                }
+            }
+
+            // Second step
+            const combinedArray = scores.map((value, index) => ({
+                score: value,
+                question: filterList[index],
+            }));
+
+            combinedArray.sort((a, b) => b.score - a.score);
+            combinedArray.forEach((item) => {
+                delete item.score;
+            });
+
+            // Get the final list
+            let finalList = combinedArray.map((item) => item.question);
+            finalList.forEach((item) => {
+                delete item.full_name;
+            });
+
+            return res.status(200).json(finalList);
         }
-
-        // Second step
-        const combinedArray = scores.map((value, index) => ({
-            score: value,
-            question: filterList[index],
-        }));
-
-        combinedArray.sort((a, b) => b.score - a.score);
-        combinedArray.forEach((item) => {
-            delete item.score;
-        });
-
-        // Get the final list
-        let finalList = combinedArray.map((item) => item.question);
-        finalList.forEach((item) => {
-            delete item.full_name;
-        });
-
-        res.status(200).json(finalList);
     } catch (error) {
         console.error("Error in search endpoint:", error);
-        res.status(500).json({ error: "Internal server error." });
+        return res.status(500).json({ error: "Internal server error." });
     }
 }; //
 
 // Controller for API get all MCQ of a user
 export const handleGetAllMCQ = async (req, res) => {
+    const userId = req.userId;
+    const page = req.query.page;
+    const limit = req.query.limit;
     try {
-        const userId = req.userId;
-        const query = `SELECT uid, name, description FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at ASC`;
-        const [result, field] = await db.execute(query);
+        if (page && limit) {
+            const offset = (page - 1) * limit;
+            const query1 = `SELECT uid, name, description, tag FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at ASC LIMIT ${limit} OFFSET ${offset}`;
+            const [result, field] = await db.execute(query1);
 
-        res.status(200).json({ data: result });
+            return res
+                .status(200)
+                .json({ data: result, page: page, limit: limit });
+        } else {
+            const query2 = `SELECT uid, name, description, tag FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at ASC`;
+            const [result, field] = await db.execute(query2);
+
+            return res.status(200).json({ data: result });
+        }
     } catch (error) {
         console.error("Error in /all route:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 }; //
