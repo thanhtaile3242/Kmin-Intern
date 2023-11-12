@@ -11,8 +11,8 @@ export const validateUserSignUp = [
     },
     // Define validation rules for each field
     body("username")
-        .isLength({ min: 5 })
-        .withMessage("Username must be at least 5 characters long"),
+        .isLength({ min: 3 })
+        .withMessage("Username must be at least 3 characters long"),
     body("email").isEmail().withMessage("Invalid email address"),
     body("password")
         .isLength({ min: 6 })

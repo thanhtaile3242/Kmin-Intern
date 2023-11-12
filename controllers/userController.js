@@ -8,7 +8,7 @@ import { stringify as uuidStringify } from "uuid";
 import { getInsertQuery } from "../utils/structure.js";
 const redis = new Redis();
 // For generate a uuid key
-const SECRET_UUID = uuidv4();
+const SECRET_UUID = uuidv4(); // lấy giá trị const
 export const handleSignUp = async (req, res) => {
     const { username, email, password } = req.body;
     try {
@@ -68,4 +68,4 @@ export const handleSignIn = async (req, res) => {
             return res.status(401).json({ error: "Wrong password" });
         }
     });
-}; // pendings
+}; // pending

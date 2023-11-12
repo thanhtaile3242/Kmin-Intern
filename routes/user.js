@@ -12,6 +12,7 @@ router.post(
     [validateUserSignUp, checkExistentAccount],
     handleSignUp
 );
+// API sign in
 router.post("/signin", validateUserSignIn, handleSignIn);
 
 export default router;

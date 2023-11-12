@@ -142,4 +142,4 @@ export const handleUpdateMCQ = async (req, res) => {
             error: error.message,
         });
     }
-};
+}; //
