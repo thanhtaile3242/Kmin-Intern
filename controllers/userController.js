@@ -8,17 +8,17 @@ import { stringify as uuidStringify } from "uuid";
 import { getInsertQuery } from "../utils/structure.js";
 const redis = new Redis();
 // For generate a uuid key
-const SECRET_UUID = uuidv4(); // lấy giá trị const
+const SECRET_UUID = "3216f1e5-3cb8-42e7-8a1b-c8595798bab6";
 export const handleSignUp = async (req, res) => {
     const { username, email, password } = req.body;
     try {
         // Generate uuid from SECRET_UUID and email from v5(uuid library).
-        let uuid = uuidv5(email, SECRET_UUID);
+        let uuid = uuidv5(email.toLowerCase(), SECRET_UUID);
         // Hash password by bcrypt library
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
         // Create query statement to insert into account table
-        const query = `INSERT INTO account (\`uid\`, \`email\`, \`username\`, \`password\`) VALUES (UUID_TO_BIN('${uuid}'), '${email}', '${username}', '${hashedPassword}')`;
+        const query = `INSERT INTO account (\`uid\`, \`email\`, \`username\`, \`password\`) VALUES (UUID_TO_BIN('${uuid}'), '${email.toLowerCase()}', '${username}', '${hashedPassword}')`;
         // Insert action execution
         await db.execute(query);
         // Return for client-side

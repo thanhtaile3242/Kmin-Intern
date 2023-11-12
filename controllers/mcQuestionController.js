@@ -208,3 +208,17 @@ export const handleSearchMCQbyKeyword = async (req, res) => {
         res.status(500).json({ error: "Internal server error." });
     }
 }; //
+
+// Controller for API get all MCQ of a user
+export const handleGetAllMCQ = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const query = `SELECT uid, name, description FROM question WHERE account_uid = UUID_TO_BIN('${userId}') ORDER BY created_at ASC`;
+        const [result, field] = await db.execute(query);
+
+        res.status(200).json({ data: result });
+    } catch (error) {
+        console.error("Error in /all route:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}; //

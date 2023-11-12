@@ -72,3 +72,20 @@ export const validateUserSignIn = async (req, res, next) => {
         return res.status(500).json({ error: "Database error" });
     }
 }; // (pending)
+
+export const checkSpecialCharactersInUsername = (req, res, next) => {
+    const inputUsername = req.body.username;
+    // Define a regular expression to match special characters
+    const specialCharRegex = /[.,\/?\\$£@#!%^&*;:{}=\-_`~()]/g;
+
+    // Check if the input string contains any special characters
+    if (specialCharRegex.test(inputUsername)) {
+        // Special characters found, alert or handle as needed
+        return res
+            .status(400)
+            .json({ error: "Special characters not allowed in Username" });
+    }
+
+    // No special characters found, proceed to the next middleware or route handler
+    next();
+}; //(pending)

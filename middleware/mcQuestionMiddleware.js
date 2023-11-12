@@ -102,7 +102,7 @@ export const checkQuestionExistent = async (req, res, next) => {
 
 export const checkFilterEmpty = (req, res, next) => {
     // Handle keyword
-    let keyWord = req.body.keyword;
+    let keyWord = req.body.filter;
     keyWord = removeSpecialCharactersAndTrim(keyWord);
     keyWord = removeVietnameseDiacritics(keyWord);
     if (!keyWord) {
@@ -111,4 +111,22 @@ export const checkFilterEmpty = (req, res, next) => {
         req.keyword = keyWord;
         next();
     }
+}; //
+
+export const checkLimitOfMCQ = (req, res, next) => {
+    const data = req.body;
+    // Check if having more than 10 questions
+    const hasMoreThanFiveObjects = data.length > 10;
+    // Check if having more than 10 answers in each question
+    const hasAnswerWithMoreThanThreeObjects = data.some(
+        (item) => item.answers.length > 10
+    );
+
+    if (hasMoreThanFiveObjects) {
+        return res.status(400).json({ error: "Having more than 10 questions" });
+    }
+    if (hasAnswerWithMoreThanThreeObjects) {
+        return res.status(400).json({ error: "Having more than 10 answers" });
+    }
+    next();
 }; //

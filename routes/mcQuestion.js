@@ -12,6 +12,7 @@ import {
     checkEmptyMCQ,
     checkQuestionExistent,
     checkFilterEmpty,
+    checkLimitOfMCQ,
 } from "../middleware/mcQuestionMiddleware.js";
 // Controller
 import {
@@ -19,13 +20,14 @@ import {
     handleDeleteMCQ,
     handleUpdateMCQ,
     handleSearchMCQbyKeyword,
+    handleGetAllMCQ,
 } from "../controllers/mcQuestionController.js";
 
 const router = express.Router();
 // API create Multiple choice question
 router.post(
     "/create-multiple-choice",
-    [checkValidToken, checkEmptyMCQ],
+    [checkValidToken, checkEmptyMCQ, checkLimitOfMCQ],
     handleCreateMCQ
 );
 // API delete a question (soft-delete)
@@ -38,6 +40,9 @@ router.delete(
 router.put("/edit", [checkValidToken, checkEmptyMCQ], handleUpdateMCQ);
 
 // API get question by keyword
-router.get("/search", checkFilterEmpty, handleSearchMCQbyKeyword);
+router.get("/search-keyword", [checkFilterEmpty], handleSearchMCQbyKeyword);
+
+// API get all questions of a user
+router.get("/all", [checkValidToken], handleGetAllMCQ);
 
 export default router;
