@@ -87,10 +87,9 @@ router.get("/test", async (req, res) => {
     let keyWord = req.body.keyword;
     keyWord = removeVietnameseDiacritics(keyWord).toLowerCase();
 
-    //
     const q = generateSQLQuery(keyWord);
-
     let [result, field] = await db.execute(q);
+
     // Transform result
     result = result.map((obj) => {
         return {
@@ -111,18 +110,16 @@ router.get("/test", async (req, res) => {
             filterList.push(item);
         }
     }
-    // Sort
+    // Sort the combined array in descending order based on the 'value' property
     const combinedArray = scores.map((value, index) => ({
         score: value,
         question: filterList[index],
     }));
-    // Sort the combined array in descending order based on the 'value' property
     combinedArray.sort((a, b) => b.score - a.score);
     combinedArray.forEach((item) => {
         delete item.score;
     });
-    // console.log(combinedArray);
-
+    // Get the final list
     let finalList = combinedArray.map((item) => item.question);
     finalList.forEach((item) => {
         delete item.full_name;
