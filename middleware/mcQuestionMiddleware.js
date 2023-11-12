@@ -37,6 +37,7 @@ export const checkValidToken = async (req, res, next) => {
 }; //
 
 export const checkEmptyMCQ = (req, res, next) => {
+    let question_uid = req.params.id.trim();
     // Extract the list question
     const listQuestion = req.body;
     // Function for checking "" value of an array
@@ -71,13 +72,13 @@ export const checkEmptyMCQ = (req, res, next) => {
             .status(401)
             .json({ error: "Error: Some properties have empty string values" });
     } else {
+        req.question_uid = question_uid;
         next();
     }
 }; //
 
 export const checkQuestionExistent = async (req, res, next) => {
-    const question_uid = req.body.question_uid.trim();
-
+    const question_uid = req.params.id.trim();
     // Prepare the query using placeholders for parameters
     let query = `SELECT * FROM question WHERE uid =  '${question_uid}'`;
 

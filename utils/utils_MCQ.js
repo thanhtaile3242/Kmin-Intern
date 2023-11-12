@@ -26,6 +26,7 @@ export const generateCollateQuery = (keyword) => {
         FROM (
             SELECT uid, description, name, CONCAT(name, " ", description) AS full_name
             FROM question
+            WHERE is_deleted = "0"
         ) AS subquery
         WHERE ${conditionClauses};
     `;

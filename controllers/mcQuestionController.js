@@ -35,9 +35,10 @@ export const handleCreateMCQ = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 }; //
+
 // Controller for API delete MCQ (soft-delete)
 export const handleDeleteMCQ = async (req, res) => {
-    const question_uid = req.body.question_uid.trim();
+    const question_uid = req.question_uid.trim();
 
     // Prepare the queries using placeholders for parameters
     const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE uid = '${question_uid}'`;
@@ -72,7 +73,7 @@ export const handleDeleteMCQ = async (req, res) => {
 // Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
     const newQuestion = req.body[0];
-    const question_uid = newQuestion.question_uid;
+    const question_uid = req.question_uid;
 
     try {
         // Update question
@@ -213,7 +214,7 @@ export const handleSearchMCQbyKeyword = async (req, res) => {
 export const handleGetAllMCQ = async (req, res) => {
     try {
         const userId = req.userId;
-        const query = `SELECT uid, name, description FROM question WHERE account_uid = UUID_TO_BIN('${userId}') ORDER BY created_at ASC`;
+        const query = `SELECT uid, name, description FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at ASC`;
         const [result, field] = await db.execute(query);
 
         res.status(200).json({ data: result });

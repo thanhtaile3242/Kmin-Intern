@@ -32,12 +32,12 @@ router.post(
 );
 // API delete a question (soft-delete)
 router.delete(
-    "/delete",
+    "/delete/:id",
     [checkValidToken, checkQuestionExistent],
     handleDeleteMCQ
 );
 // API update a question
-router.put("/edit", [checkValidToken, checkEmptyMCQ], handleUpdateMCQ);
+router.put("/edit/:id", [checkValidToken, checkEmptyMCQ], handleUpdateMCQ);
 
 // API get question by keyword
 router.get("/search-keyword", [checkFilterEmpty], handleSearchMCQbyKeyword);
