@@ -133,4 +133,3 @@ function generateSQLQuery(keyword) {
 
 // Example usage:
 const queryString = generateSQLQuery("gioi thieu bai tap toan 12 dia 10");
-console.log(queryString);
