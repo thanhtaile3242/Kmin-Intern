@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import db from "../models/db.js";
 import { stringify as uuidStringify } from "uuid";
+// Utils
 import {
     removeSpecialCharactersAndTrim,
     removeVietnameseDiacritics,
@@ -34,7 +35,7 @@ export const checkValidToken = async (req, res, next) => {
             return res.status(500).json({ error: "Internal Server Error" });
         }
     }
-}; //
+};
 
 export const checkEmptyMCQ = (req, res, next) => {
     // Extract the list question
@@ -73,12 +74,13 @@ export const checkEmptyMCQ = (req, res, next) => {
     } else {
         next();
     }
-}; //
+};
 
 export const checkQuestionExistent = async (req, res, next) => {
     const question_uid = req.params.id.trim();
+    const userId = req.userId;
     // Prepare the query using placeholders for parameters
-    let query = `SELECT * FROM question WHERE uid = '${question_uid}' AND is_deleted = '0'`;
+    let query = `SELECT * FROM question WHERE account_uid = UUID_TO_BIN('${userId}')  AND uid = '${question_uid}' AND is_deleted = '0'`;
 
     try {
         // Execute the query with the question_uid parameter
@@ -96,7 +98,7 @@ export const checkQuestionExistent = async (req, res, next) => {
         console.error(error);
         return res.status(500).json({ error: "Internal server error" });
     }
-}; //
+};
 
 export const checkFilterEmpty = (req, res, next) => {
     // Handle keyword
@@ -109,7 +111,7 @@ export const checkFilterEmpty = (req, res, next) => {
         req.keyWord = keyWord;
         next();
     }
-}; //
+};
 
 export const checkLimitOfMCQ = (req, res, next) => {
     const data = req.body;
@@ -127,4 +129,4 @@ export const checkLimitOfMCQ = (req, res, next) => {
         return res.status(400).json({ error: "Having more than 10 answers" });
     }
     next();
-}; //
+};
