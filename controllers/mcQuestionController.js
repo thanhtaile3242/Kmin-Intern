@@ -14,11 +14,11 @@ export const handleCreateMCQ = async (req, res) => {
         const listQuestion = req.body;
         // The loop for inserting the list of questions
         for (const question of listQuestion) {
-            const { name, description, tag } = question;
+            const { name, description, tag, level } = question;
             // Create uuid for each question (Also use for answers of this question)
             const uuidQuestion = uuidv4();
             // Insert each question into question table
-            const queryQuestion = `INSERT INTO question (\`uid\`,\`account_uid\`,\`question_type_id\`,\`name\`,\`description\`, \`tag\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${description}','${tag}')`;
+            const queryQuestion = `INSERT INTO question (\`uid\`,\`account_uid\`,\`question_type_id\`,\`name\`,\`description\`, \`tag\`, \`level\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${description}','${tag}', '${level}')`;
             await db.execute(queryQuestion);
             // Insert each answer into answer table
             for (const answer of question.answers) {
@@ -29,10 +29,12 @@ export const handleCreateMCQ = async (req, res) => {
                 await db.execute(queryAnswer);
             }
         }
-        res.status(201).json({ message: "Questions created successfully" });
+        return res
+            .status(201)
+            .json({ message: "Questions created successfully" });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "Internal server error" });
     }
 }; //
 
@@ -214,7 +216,7 @@ export const handleSearchMCQbyKeyword = async (req, res) => {
             const query = generateCollateQuery(keyWord);
 
             let [currentList, field] = await db.execute(query);
-            console.log(currentList);
+
             // Transform the current list of questions got from database
             currentList = currentList.map((obj) => {
                 return {
@@ -261,7 +263,7 @@ export const handleSearchMCQbyKeyword = async (req, res) => {
             return res.status(200).json(finalList);
         }
     } catch (error) {
-        console.error("Error in search endpoint:", error);
+        console.error(error);
         return res.status(500).json({ error: "Internal server error." });
     }
 }; //
@@ -274,14 +276,14 @@ export const handleGetAllMCQ = async (req, res) => {
     try {
         if (page && limit) {
             const offset = (page - 1) * limit;
-            const query1 = `SELECT uid, name, description, tag FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at ASC LIMIT ${limit} OFFSET ${offset}`;
+            const query1 = `SELECT uid, name, description, tag FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
             const [result, field] = await db.execute(query1);
 
             return res
                 .status(200)
                 .json({ data: result, page: page, limit: limit });
         } else {
-            const query2 = `SELECT uid, name, description, tag FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at ASC`;
+            const query2 = `SELECT uid, name, description, tag FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = "0" ORDER BY created_at DESC`;
             const [result, field] = await db.execute(query2);
 
             return res.status(200).json({ data: result });

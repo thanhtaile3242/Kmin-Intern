@@ -27,7 +27,7 @@ export const generateCollateQuery = (keyword, limit, offset) => {
         FROM (
             SELECT uid, description, name, tag, CONCAT(name, " ", description, " ", tag) AS full_name
             FROM question
-            WHERE is_deleted = "0" LIMIT ${limit} OFFSET ${offset}
+            WHERE is_deleted = "0" ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
         ) AS subquery
         WHERE ${conditionClauses};
     `;
@@ -42,7 +42,6 @@ export const generateCollateQuery = (keyword, limit, offset) => {
         WHERE ${conditionClauses};
     `;
     }
-    console.log(sqlQuery);
 
     return sqlQuery;
 };

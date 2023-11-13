@@ -78,7 +78,7 @@ export const checkEmptyMCQ = (req, res, next) => {
 export const checkQuestionExistent = async (req, res, next) => {
     const question_uid = req.params.id.trim();
     // Prepare the query using placeholders for parameters
-    let query = `SELECT * FROM question WHERE uid =  '${question_uid}'`;
+    let query = `SELECT * FROM question WHERE uid = '${question_uid}' AND is_deleted = '0'`;
 
     try {
         // Execute the query with the question_uid parameter
