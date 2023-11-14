@@ -1,5 +1,11 @@
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
+import {
+    removeVietnameseDiacritics,
+    generateQuerySearchFilterChallenge,
+    removeSpecialCharactersAndTrim,
+    countMatching,
+} from "../utils/utils_MCQ.js";
 
 // Controller for API create a challenge
 export const handleCreateChallenge = async (req, res) => {
@@ -57,6 +63,92 @@ export const handleDeleteChallenge = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Internal Server Error: Unable to delete challenge.",
+        });
+    }
+};
+// Controller for API search and filter challenges
+export const handleSearchAndFilterChallenge = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const page = req.query.page;
+        const limit = req.query.limit;
+        let keyword = req.query.keyword;
+        let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
+            ? req.query.sortOrder
+            : "";
+        let sortField = ["name", "created_at"].includes(req.query.sortField)
+            ? req.query.sortField
+            : "";
+        let query = `SELECT uid, description, name ,CONCAT(name, " ", description) AS full_name
+        FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
+        //
+        if (sortField && sortOrder) {
+            query += ` ORDER BY ${sortField} ${sortOrder}`;
+        }
+        //
+        if (keyword) {
+            keyword = removeSpecialCharactersAndTrim(keyword);
+            keyword = removeVietnameseDiacritics(keyword);
+            query = generateQuerySearchFilterChallenge(keyword, query);
+        }
+        //
+        if (limit && page) {
+            const offset = (page - 1) * limit;
+            query += ` limit ${limit} offset ${offset}`;
+        }
+        //
+        let [currentList, field] = await db.execute(query);
+
+        if (keyword) {
+            currentList = currentList.map((obj) => {
+                return {
+                    ...obj,
+                    full_name: removeVietnameseDiacritics(
+                        obj.full_name
+                    ).toLowerCase(),
+                };
+            });
+            // Filter and Ranking the order of the questions in result
+            // First step
+            let filterList = [];
+            let scores = [];
+
+            for (let item of currentList) {
+                const fullName = item.full_name;
+                const score = countMatching(keyword, fullName);
+
+                // If the keyword is similar to fullName, add the item to the array
+                if (score > 0) {
+                    scores.push(score);
+                    filterList.push(item);
+                }
+            }
+
+            // Second step
+            const combinedArray = scores.map((value, index) => ({
+                score: value,
+                question: filterList[index],
+            }));
+
+            combinedArray.sort((a, b) => b.score - a.score);
+            combinedArray.forEach((item) => {
+                delete item.score;
+            });
+
+            // Get the final list
+            currentList = combinedArray.map((item) => item.question);
+        }
+        currentList.forEach((item) => {
+            delete item.full_name;
+        });
+
+        res.status(200).json({
+            data: currentList,
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({
+            error: "Internal Server Error",
         });
     }
 };

@@ -1,7 +1,13 @@
 import express from "express";
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
-
+// Utils
+import {
+    removeVietnameseDiacritics,
+    generateQuerySearchFilterChallenge,
+    removeSpecialCharactersAndTrim,
+    countMatching,
+} from "../utils/utils_MCQ.js";
 // Middleware
 import {
     checkValidToken,
@@ -12,9 +18,9 @@ import { checkChallengeExistent } from "../middleware/challengeMiddleware.js";
 import {
     handleCreateChallenge,
     handleDeleteChallenge,
+    handleSearchAndFilterChallenge,
 } from "../controllers/challengeController.js";
 const router = express.Router();
-
 // API create a challenge
 router.post(
     "/create",
@@ -27,5 +33,7 @@ router.delete(
     [checkValidToken, checkChallengeExistent],
     handleDeleteChallenge
 );
+// API search and filter challenges
+router.get("/search", [checkValidToken], handleSearchAndFilterChallenge);
 
 export default router;

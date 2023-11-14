@@ -13,7 +13,7 @@ export const removeVietnameseDiacritics = (str) => {
         })
         .join("");
 };
-// Generate SQL query for search and filter
+// Generate SQL query for search and filter (MCQ)
 export const generateQuerySearchFilter = (keyword, query) => {
     const keywords = keyword.split(" ");
 
@@ -21,6 +21,18 @@ export const generateQuerySearchFilter = (keyword, query) => {
         .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
         .join(" AND ");
     let sqlQuery = `SELECT uid, description, name, full_name, level, tag FROM (${query}) AS subquery
+    WHERE ${conditionClauses}`;
+
+    return sqlQuery;
+};
+// Generate SQL query for search and filter (Challenge)
+export const generateQuerySearchFilterChallenge = (keyword, query) => {
+    const keywords = keyword.split(" ");
+
+    const conditionClauses = keywords
+        .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
+        .join(" AND ");
+    let sqlQuery = `SELECT uid, description, name, full_name FROM (${query}) AS subquery
     WHERE ${conditionClauses}`;
 
     return sqlQuery;

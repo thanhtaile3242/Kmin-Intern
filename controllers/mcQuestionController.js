@@ -188,7 +188,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             keyword = removeVietnameseDiacritics(keyword);
             query = generateQuerySearchFilter(keyword, query);
         }
-
+        //
         if (limit && page) {
             const offset = (page - 1) * limit;
             query += ` limit ${limit} offset ${offset}`;
