@@ -37,9 +37,9 @@ export const checkValidToken = async (req, res, next) => {
     }
 };
 
-export const checkEmptyMCQ = (req, res, next) => {
+export const checkEmptyData = (req, res, next) => {
     // Extract the list question
-    const listQuestion = req.body;
+    const listData = req.body;
     // Function for checking "" value of an array
     function hasEmptyStringProperty(array) {
         // Helper function to check if an object has any property with an empty string
@@ -66,7 +66,7 @@ export const checkEmptyMCQ = (req, res, next) => {
         return false; // No empty string properties found
     }
     // Create the flag
-    const isNullValueFlag = hasEmptyStringProperty(listQuestion);
+    const isNullValueFlag = hasEmptyStringProperty(listData);
     if (isNullValueFlag) {
         return res
             .status(401)

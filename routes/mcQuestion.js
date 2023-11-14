@@ -1,5 +1,6 @@
 import express from "express";
 import db from "../models/db.js";
+
 // Utils
 import {
     removeVietnameseDiacritics,
@@ -10,7 +11,7 @@ import {
 // Middleware
 import {
     checkValidToken,
-    checkEmptyMCQ,
+    checkEmptyData,
     checkQuestionExistent,
     checkFilterEmpty,
     checkLimitOfMCQ,
@@ -27,7 +28,7 @@ const router = express.Router();
 // API create Multiple choice question
 router.post(
     "/create-multiple-choice",
-    [checkValidToken, checkEmptyMCQ, checkLimitOfMCQ],
+    [checkValidToken, checkEmptyData, checkLimitOfMCQ],
     handleCreateMCQ
 );
 // API delete a question (soft-delete)
@@ -37,7 +38,7 @@ router.delete(
     handleDeleteMCQ
 );
 // API update a question
-router.put("/edit/:id", [checkValidToken, checkEmptyMCQ], handleUpdateMCQ);
+router.put("/edit/:id", [checkValidToken, checkEmptyData], handleUpdateMCQ);
 
 // API get questions by search and filter
 router.get("/search", [checkValidToken], handleSearchAndFilterMCQ);

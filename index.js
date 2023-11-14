@@ -1,14 +1,14 @@
 import express from "express";
-import userRoute from "./routes/user.js"; //Api for user service
-import mcQuestionRoute from "./routes/mcQuestion.js";
-
+import userRoute from "./routes/user.js"; //Router for API user
+import mcQuestionRoute from "./routes/mcQuestion.js"; // Router for API multiple choice questions
+import challengeRoute from "./routes/challenge.js"; // Router for API challenge
 const app = express();
 
 app.use(express.json());
-
-app.use("/api/user", userRoute); // Declare the route of user API
-app.use("/api/questions", mcQuestionRoute); //Declare the route for multiple choice questions API
-
+// Application of API routers
+app.use("/api/user", userRoute);
+app.use("/api/questions", mcQuestionRoute);
+app.use("/api/challenge", challengeRoute);
 app.listen(8800, () => {
     console.log("Connected the server");
 });
