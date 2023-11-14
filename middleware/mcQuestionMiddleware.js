@@ -77,12 +77,12 @@ export const checkEmptyData = (req, res, next) => {
 };
 
 export const checkQuestionExistent = async (req, res, next) => {
-    const question_uid = req.params.id.trim();
-    const userId = req.userId;
-    // Prepare the query using placeholders for parameters
-    let query = `SELECT * FROM question WHERE account_uid = UUID_TO_BIN('${userId}')  AND uid = '${question_uid}' AND is_deleted = '0'`;
-
     try {
+        const question_uid = req.params.id.trim();
+        const userId = req.userId;
+        // Prepare the query using placeholders for parameters
+        let query = `SELECT * FROM question WHERE account_uid = UUID_TO_BIN('${userId}')  AND uid = '${question_uid}' AND is_deleted = '0'`;
+
         // Execute the query with the question_uid parameter
         let [result, fields] = await db.execute(query);
 

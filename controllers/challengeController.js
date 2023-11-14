@@ -1,7 +1,7 @@
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
 
-// CController for API create a challenge
+// Controller for API create a challenge
 export const handleCreateChallenge = async (req, res) => {
     try {
         const userId = req.userId;
@@ -29,6 +29,34 @@ export const handleCreateChallenge = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Internal Server Error: Unable to create challenge.",
+        });
+    }
+};
+// Controller for API delete a challenge
+export const handleDeleteChallenge = async (req, res) => {
+    try {
+        await db.beginTransaction();
+        // Get data
+        const userId = req.userId;
+        const challenge_uid = req.data.uid;
+        // challenge table
+        const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
+        await db.execute(queryDeleteC);
+        // challenge_detail table
+        const queryDeleteCD = `UPDATE challenge_detail SET is_deleted = 1 WHERE challenge_uid = '${challenge_uid}'`;
+        await db.execute(queryDeleteCD);
+        //
+        await db.commit();
+        res.status(200).json({
+            success: true,
+            message: "Challenge deleted successfully.",
+        });
+    } catch (error) {
+        await db.rollback();
+        console.error("Error deleting challenge:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error: Unable to delete challenge.",
         });
     }
 };
