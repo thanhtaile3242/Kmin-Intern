@@ -24,7 +24,6 @@ export const handleCreateChallenge = async (req, res) => {
             const query2 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`) VALUES ('${challenge_uid}', '${question_uid}')`;
             await db.execute(query2);
         }
-
         // If everything is successful, send a success response
         res.status(200).json({
             success: true,
@@ -149,6 +148,40 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
         console.error("Error:", error);
         res.status(500).json({
             error: "Internal Server Error",
+        });
+    }
+};
+// Controller for API update a challenge
+export const handleUpdateChallenge = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const challenge_uid = req.params.id || req.body.uid;
+        const newChallenge = req.body[0];
+        const newQuestions = newChallenge.questions;
+
+        // Update information of a challenge
+        const { name, description, minute } = newChallenge;
+        const query = `UPDATE challenge SET name = '${name}', description = '${description}', minute = '${minute}'
+        WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
+        await db.execute(query);
+
+        // Delete all old questions in a challenge
+        const query1 = `DELETE FROM challenge_detail WHERE challenge_uid = '${challenge_uid}'`;
+        await db.execute(query1);
+
+        // Insert all new questions in a challenge
+        for (const question of newQuestions) {
+            const { question_uid } = question;
+            const query2 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`)
+            VALUES ('${challenge_uid}', '${question_uid}')`;
+            await db.execute(query2);
+        }
+
+        res.status(200).json({ message: "Challenge updated successfully" });
+    } catch (error) {
+        res.status(500).json({
+            message: "Error updating challenge",
+            error: error.message,
         });
     }
 };

@@ -38,7 +38,7 @@ export const handleCreateMCQ = async (req, res) => {
         console.error(error);
         return res.status(500).json({ error: "Internal server error" });
     }
-}; //
+};
 
 // Controller for API delete MCQ (soft-delete)
 export const handleDeleteMCQ = async (req, res) => {
@@ -72,88 +72,78 @@ export const handleDeleteMCQ = async (req, res) => {
         // Send an error response
         return res.status(500).json({ error: "Error soft-deleting user" });
     }
-}; //
+};
 
 // Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
-    const newQuestion = req.body[0];
-    const question_uid = req.params.id.trim();
-    const userId = req.userId;
     try {
+        const newQuestion = req.body[0];
+        let newData = req.body[0].answers;
+        const question_uid = req.params.id.trim();
+        const userId = req.userId;
         // Update question
-        const query = `UPDATE question SET name = '${newQuestion.name}', description = '${newQuestion.description}' WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${newQuestion.question_uid}'`;
+        const { name, description, tag, level } = newQuestion;
+        const query = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}'
+        WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${newQuestion.question_uid}'`;
         await db.execute(query);
-        // Update answer
+        // Update answers
         const query1 = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}' and is_deleted = '0'`;
-        // Get lists of answers from newData and currentData
-        const [currentAnswersList] = await db.execute(query1); //From database
-        let newAnswersList = newQuestion.answers; // From client-side
+        let [currentData] = await db.execute(query1);
+        // lấy 2 list uid
+        const newUID = new Set(newData.map((item) => item.uid));
+        const currentUID = new Set(currentData.map((item) => item.uid));
 
-        // Get list of uuid from newAnswersList and currentAnswersList
-        const uuidOfNewList = new Set(newAnswersList.map((item) => item.uid));
-        const uuidOfCurrentList = new Set(
-            currentAnswersList.map((item) => item.uid)
+        // Lấy list trùng của newData
+        const sameInNewData = newData.filter((item) =>
+            currentUID.has(item.uid)
         );
-        // Trường hợp 1: newAnswersList > currentAnswersList
-        if (newAnswersList.length > currentAnswersList.length) {
-            const NotHavingUid = newAnswersList.filter(
-                (item) => !uuidOfCurrentList.has(item.uid)
-            );
-            const havingUid = newAnswersList.filter((item) =>
-                uuidOfCurrentList.has(item.uid)
-            );
-            let newUidAnswers = NotHavingUid.map((obj) => ({
+
+        // Lấy list không trùng của newData
+        let notSameInNewData = newData.filter(
+            (item) => !currentUID.has(item.uid)
+        );
+
+        // Lấy list không trùng của currentData
+        let notSameInCurrentData = currentData.filter(
+            (item) => !newUID.has(item.uid)
+        );
+        // Delete
+        if (notSameInCurrentData.length > 0) {
+            for (const item of notSameInCurrentData) {
+                const query2 = `UPDATE answer SET is_deleted = 1 WHERE uid = '${item.uid}'`;
+                await db.execute(query2);
+            }
+        }
+        // Update
+        if (sameInNewData.length > 0) {
+            for (const item of sameInNewData) {
+                const { uid, order_answer, description, correct } = item;
+                const query3 = `UPDATE answer SET order_answer = '${order_answer}', description = '${description}', correct = '${correct}'
+                WHERE uid = '${uid}'`;
+                await db.execute(query3);
+            }
+        }
+        // Insert
+        if (notSameInNewData.length > 0) {
+            notSameInNewData = notSameInNewData.map((obj) => ({
                 ...obj,
                 uid: uuidv4(),
             }));
-            newAnswersList = [...havingUid, ...newUidAnswers];
-            for (const newAnswer of newAnswersList) {
-                const query2 = `
-                REPLACE INTO answer (\`mc_question_uid\`,\`uid\`,\`description\`, \`correct\`,\`order_answer\`)
-                VALUES ('${question_uid}', '${newAnswer.uid}', '${newAnswer.description}','${newAnswer.correct}','${newAnswer.order_answer}')
-              `;
-                await db.execute(query2);
-            }
-            return res
-                .status(200)
-                .json({ message: "Answers updated and new answers added." });
-        }
-        // Trường hợp 2: newAnswerList < currentAnswerList
-        if (newAnswersList.length < currentAnswersList.length) {
-            const deletedAnswersList = currentAnswersList.filter(
-                (item) => !uuidOfNewList.has(item.uid)
-            );
-
-            for (const newAnswer of newAnswersList) {
-                const query3 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
+            for (const item of notSameInNewData) {
+                const { uid, order_answer, description, correct } = item;
+                const query3 = `INSERT INTO answer (\`mc_question_uid\`,\`uid\`,\`order_answer\`, \`description\`, \`correct\`) VALUES ('${question_uid}','${uid}', '${order_answer}', '${description}', '${correct}')`;
                 await db.execute(query3);
             }
+        }
 
-            for (const deletedAnswer of deletedAnswersList) {
-                const query4 = `UPDATE answer SET is_deleted = 1 WHERE uid = '${deletedAnswer.uid}'`;
-                await db.execute(query4);
-            }
-            return res.status(200).json({
-                message:
-                    "Answers updated and surplus answers marked as deleted.",
-            });
-        }
-        // Trường hợp 3: newAnswerList = currentAnswerList
-        if (newAnswersList.length === currentAnswersList.length) {
-            for (const newAnswer of newAnswersList) {
-                const query5 = `UPDATE answer SET order_answer = '${newAnswer.order_answer}', description = '${newAnswer.description}', correct = '${newAnswer.correct}' WHERE uid = '${newAnswer.uid}'`;
-                await db.execute(query5);
-            }
-            return res.status(200).json({ message: "Answers updated." });
-        }
+        res.status(200).json({ message: "Update successful" });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            message: "An error occurred while updating answers.",
+        res.status(500).json({
+            message: "Internal server error",
             error: error.message,
         });
     }
-}; //
+};
 
 // Controller for API search and filter MC questions
 export const handleSearchAndFilterMCQ = async (req, res) => {

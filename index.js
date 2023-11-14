@@ -9,6 +9,7 @@ app.use(express.json());
 app.use("/api/user", userRoute);
 app.use("/api/questions", mcQuestionRoute);
 app.use("/api/challenge", challengeRoute);
+
 app.listen(8800, () => {
     console.log("Connected the server");
 });
