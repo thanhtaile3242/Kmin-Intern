@@ -183,8 +183,15 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             const offset = (page - 1) * limit;
             query += ` limit ${limit} offset ${offset}`;
         }
-        // Get data
+        // Get questions
         let [currentList, field] = await db.execute(query);
+        // Get answers
+        for (let i = 0; i < currentList.length; i++) {
+            const mc_question_uid = currentList[i].uid;
+            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
+            const [answers] = await db.execute(queryA);
+            currentList[i].answers = answers;
+        }
         // Ranking related keyword
         if (keyword) {
             currentList = currentList.map((obj) => {
@@ -230,12 +237,12 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             delete item.full_name;
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             data: currentList,
         });
     } catch (error) {
         console.error("Error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             error: "Internal Server Error",
         });
     }

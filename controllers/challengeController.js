@@ -43,7 +43,7 @@ export const handleDeleteChallenge = async (req, res) => {
         await db.beginTransaction();
         // Get data
         const userId = req.userId;
-        const challenge_uid = req.data.uid;
+        const challenge_uid = req.data.uid || req.body.uid;
         // challenge table
         const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
         await db.execute(queryDeleteC);
@@ -95,9 +95,22 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
             const offset = (page - 1) * limit;
             query += ` limit ${limit} offset ${offset}`;
         }
-        //
+        //Get challenge
         let [currentList, field] = await db.execute(query);
-
+        // Get Questions and Answers
+        for (let i = 0; i < currentList.length; i++) {
+            const challenge_uid = currentList[i].uid;
+            const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}'`;
+            const [questions] = await db.execute(queryQ);
+            currentList[i].questions = questions;
+            for (let k = 0; k < currentList[i].questions.length; k++) {
+                const mc_question_uid = currentList[i].questions[k].uid;
+                const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
+                const [answers] = await db.execute(queryA);
+                currentList[i].questions[k].answers = answers;
+            }
+        }
+        // Ranking by keyword
         if (keyword) {
             currentList = currentList.map((obj) => {
                 return {
