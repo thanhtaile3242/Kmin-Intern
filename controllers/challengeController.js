@@ -198,3 +198,37 @@ export const handleUpdateChallenge = async (req, res) => {
         });
     }
 };
+// Controller for API detail one challenge and its questions
+export const handleDetailOneChallenge = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const challenge_uid = req.params.id;
+
+        // Get a challenge
+        const queryC = `SELECT uid, description, name 
+            FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const [resultC] = await db.execute(queryC);
+
+        if (resultC.length === 0) {
+            return res.status(404).json({ error: "Challenge not found" });
+        }
+
+        // Get questions
+        const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}'`;
+        const [resultQ] = await db.execute(queryQ);
+        resultC[0].questions = resultQ;
+
+        // Get answers
+        for (let i = 0; i < resultQ.length; i++) {
+            const mc_question_uid = resultC[0].questions[i].uid;
+            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
+            const [resultA] = await db.execute(queryA);
+            resultC[0].questions[i].answers = resultA;
+        }
+
+        res.json(resultC[0]);
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};

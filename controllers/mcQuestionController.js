@@ -39,7 +39,6 @@ export const handleCreateMCQ = async (req, res) => {
         return res.status(500).json({ error: "Internal server error" });
     }
 };
-
 // Controller for API delete MCQ (soft-delete)
 export const handleDeleteMCQ = async (req, res) => {
     try {
@@ -73,7 +72,6 @@ export const handleDeleteMCQ = async (req, res) => {
         return res.status(500).json({ error: "Error soft-deleting user" });
     }
 };
-
 // Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
     try {
@@ -144,7 +142,6 @@ export const handleUpdateMCQ = async (req, res) => {
         });
     }
 };
-
 // Controller for API search and filter MC questions
 export const handleSearchAndFilterMCQ = async (req, res) => {
     try {
@@ -245,5 +242,31 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         return res.status(500).json({
             error: "Internal Server Error",
         });
+    }
+};
+// Controller for API display one question and its answers
+export const handleDetailOneMCQ = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const question_uid = req.params.id;
+
+        // Get a question
+        const queryQ = `SELECT uid, description, name, tag, level 
+        FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}' AND is_deleted = '0'`;
+        const [resultQ] = await db.execute(queryQ);
+
+        if (resultQ.length === 0) {
+            return res.status(404).json({ error: "Question not found" });
+        }
+
+        // Get its answers
+        const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${question_uid}'AND is_deleted = '0'`;
+        const [resultA] = await db.execute(queryA);
+
+        resultQ[0].answers = resultA;
+        res.json(resultQ);
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 };

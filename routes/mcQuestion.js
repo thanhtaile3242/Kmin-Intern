@@ -21,6 +21,7 @@ import {
     handleDeleteMCQ,
     handleUpdateMCQ,
     handleSearchAndFilterMCQ,
+    handleDetailOneMCQ,
 } from "../controllers/mcQuestionController.js";
 
 const router = express.Router();
@@ -41,6 +42,9 @@ router.put("/edit/:id", [checkValidToken, checkEmptyData], handleUpdateMCQ);
 
 // API get questions by search and filter
 router.get("/search", [checkValidToken], handleSearchAndFilterMCQ);
+
+// API display detail a question including its answers
+router.get("/:id", [checkValidToken], handleDetailOneMCQ);
 
 // Export router
 export default router;

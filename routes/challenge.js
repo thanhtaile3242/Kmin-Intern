@@ -20,6 +20,7 @@ import {
     handleDeleteChallenge,
     handleSearchAndFilterChallenge,
     handleUpdateChallenge,
+    handleDetailOneChallenge,
 } from "../controllers/challengeController.js";
 const router = express.Router();
 // API create a challenge
@@ -36,11 +37,13 @@ router.delete(
 );
 // API search and filter challenges
 router.get("/search", [checkValidToken], handleSearchAndFilterChallenge);
-// API update challenge
+// API update a challenge
 router.put(
     "/edit/:id",
     [checkValidToken, checkEmptyData],
     handleUpdateChallenge
 );
+// API detail a challenge and its questions
+router.get("/:id", [checkValidToken], handleDetailOneChallenge);
 
 export default router;
