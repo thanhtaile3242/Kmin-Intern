@@ -11,10 +11,16 @@ export const checkChallengeExistent = async (req, res, next) => {
             req.data = result[0];
             next();
         } else {
-            return res.status(401).json({ error: "Challenge is not existent" });
+            return res.status(401).json({
+                status: "fail",
+                message: "Challenge is not existent",
+            });
         }
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
     }
 };

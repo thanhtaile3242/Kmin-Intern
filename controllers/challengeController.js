@@ -25,15 +25,15 @@ export const handleCreateChallenge = async (req, res) => {
             await db.execute(query2);
         }
         // If everything is successful, send a success response
-        res.status(200).json({
-            success: true,
-            message: "Challenge created successfully.",
+        return res.status(200).json({
+            status: "success",
+            message: "Challenge created successfully",
         });
     } catch (error) {
         console.error("Error creating challenge:", error);
-        res.status(500).json({
-            success: false,
-            message: "Internal Server Error: Unable to create challenge.",
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error: Unable to create challenge",
         });
     }
 };
@@ -43,7 +43,7 @@ export const handleDeleteChallenge = async (req, res) => {
         await db.beginTransaction();
         // Get data
         const userId = req.userId;
-        const challenge_uid = req.data.uid || req.body.uid;
+        const challenge_uid = req.params.id.trim();
         // challenge table
         const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
         await db.execute(queryDeleteC);
@@ -52,15 +52,15 @@ export const handleDeleteChallenge = async (req, res) => {
         await db.execute(queryDeleteCD);
         //
         await db.commit();
-        res.status(200).json({
-            success: true,
-            message: "Challenge deleted successfully.",
+        return res.status(200).json({
+            status: "success",
+            message: "Challenge deleted successfully",
         });
     } catch (error) {
         await db.rollback();
         console.error("Error deleting challenge:", error);
-        res.status(500).json({
-            success: false,
+        return res.status(500).json({
+            status: "error",
             message: "Internal Server Error: Unable to delete challenge.",
         });
     }
@@ -153,14 +153,23 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
         currentList.forEach((item) => {
             delete item.full_name;
         });
-
-        res.status(200).json({
+        //
+        if (currentList.length == 0) {
+            return res.status(400).json({
+                status: "fail",
+                message: "Not challenges found",
+                data: [],
+            });
+        }
+        return res.status(200).json({
+            status: "success",
             data: currentList,
         });
     } catch (error) {
         console.error("Error:", error);
-        res.status(500).json({
-            error: "Internal Server Error",
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
         });
     }
 };
@@ -168,7 +177,7 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
 export const handleUpdateChallenge = async (req, res) => {
     try {
         const userId = req.userId;
-        const challenge_uid = req.params.id || req.body.uid;
+        const challenge_uid = req.params.id;
         const newChallenge = req.body[0];
         const newQuestions = newChallenge.questions;
 
@@ -190,11 +199,15 @@ export const handleUpdateChallenge = async (req, res) => {
             await db.execute(query2);
         }
 
-        res.status(200).json({ message: "Challenge updated successfully" });
+        return res.status(200).json({
+            status: "success",
+            message: "Challenge updated successfully",
+        });
     } catch (error) {
-        res.status(500).json({
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
             message: "Error updating challenge",
-            error: error.message,
         });
     }
 };
@@ -210,7 +223,10 @@ export const handleDetailOneChallenge = async (req, res) => {
         const [resultC] = await db.execute(queryC);
 
         if (resultC.length === 0) {
-            return res.status(404).json({ error: "Challenge not found" });
+            return res.status(404).json({
+                status: "fail",
+                message: "Challenge not found",
+            });
         }
 
         // Get questions
@@ -226,9 +242,49 @@ export const handleDetailOneChallenge = async (req, res) => {
             resultC[0].questions[i].answers = resultA;
         }
 
-        res.json(resultC[0]);
+        return res.status(200).json({
+            status: "success",
+            data: resultC[0],
+        });
     } catch (err) {
         console.error("Error:", err);
-        res.status(500).json({ error: "Internal Server Error" });
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
+        });
+    }
+};
+// Controller for API introduce one challenge and its questions (maximum display 3 questions)
+export const handleIntroduceOneChallene = async (req, res) => {
+    try {
+        const challenge_uid = req.params.id;
+        const userId = req.userId;
+
+        const queryC = `SELECT uid, description, name 
+                FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const [resultC] = await db.execute(queryC);
+
+        if (resultC.length === 0) {
+            return res.status(404).json({
+                status: "fail",
+                message: "Challenge not found",
+            });
+        }
+
+        const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' limit 3`;
+        const [resultQ] = await db.execute(queryQ);
+        resultC[0].questions = resultQ;
+
+        return res.status(200).json({
+            status: "success",
+            data: resultC[0],
+        });
+    } catch (error) {
+        console.error("Error:", error);
+
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
+        });
     }
 };

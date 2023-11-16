@@ -13,12 +13,18 @@ export const checkValidToken = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         // Check the received token
         if (!authHeader) {
-            return res.status(401).json({ error: "No token provided" });
+            return res.status(401).json({
+                status: "fail",
+                message: "No token provided",
+            });
         }
 
         const tokenParts = authHeader.split(" ");
         if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
-            return res.status(401).json({ error: "Invalid token format" });
+            return res.status(401).json({
+                status: "fail",
+                message: "Invalid token format",
+            });
         }
 
         const tokenValue = tokenParts[1];
@@ -29,10 +35,16 @@ export const checkValidToken = async (req, res, next) => {
         next();
     } catch (error) {
         if (error.name === "TokenExpiredError") {
-            return res.status(401).json({ error: "Token has expired" });
+            return res.status(401).json({
+                status: "fail",
+                message: "Invalid token format",
+            });
         } else {
             console.error(error);
-            return res.status(500).json({ error: "Internal Server Error" });
+            return res.status(500).json({
+                status: "error",
+                message: "Internal Server Error",
+            });
         }
     }
 };
@@ -68,9 +80,10 @@ export const checkEmptyData = (req, res, next) => {
     // Create the flag
     const isNullValueFlag = hasEmptyStringProperty(listData);
     if (isNullValueFlag) {
-        return res
-            .status(401)
-            .json({ error: "Error: Some properties have empty string values" });
+        return res.status(401).json({
+            status: "fail",
+            message: "Some properties have empty string values",
+        });
     } else {
         next();
     }
@@ -91,12 +104,18 @@ export const checkQuestionExistent = async (req, res, next) => {
             next();
         } else {
             // If the question does not exist, return an error response
-            return res.status(401).json({ error: "Question is not existent" });
+            return res.status(401).json({
+                status: "fail",
+                message: "Question is not existent",
+            });
         }
     } catch (error) {
         // If there's an error during the database operation, catch it and return an error response
         console.error(error);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
     }
 };
 
@@ -106,7 +125,10 @@ export const checkFilterEmpty = (req, res, next) => {
     keyWord = removeSpecialCharactersAndTrim(keyWord);
     keyWord = removeVietnameseDiacritics(keyWord);
     if (!keyWord) {
-        return res.status(400).json({ error: "Empty keyword provided." });
+        return res.status(400).json({
+            status: "fail",
+            message: "Empty keyword provided.",
+        });
     } else {
         req.keyWord = keyWord;
         next();
@@ -123,10 +145,16 @@ export const checkLimitOfMCQ = (req, res, next) => {
     );
 
     if (hasMoreThanFiveObjects) {
-        return res.status(400).json({ error: "Having more than 10 questions" });
+        return res.status(400).json({
+            status: "fail",
+            message: "Having more than 10 questions",
+        });
     }
     if (hasAnswerWithMoreThanThreeObjects) {
-        return res.status(400).json({ error: "Having more than 10 answers" });
+        return res.status(400).json({
+            status: "fail",
+            message: "Having more than 10 answers",
+        });
     }
     next();
 };

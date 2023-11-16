@@ -21,8 +21,10 @@ import {
     handleSearchAndFilterChallenge,
     handleUpdateChallenge,
     handleDetailOneChallenge,
+    handleIntroduceOneChallene,
 } from "../controllers/challengeController.js";
 const router = express.Router();
+
 // API create a challenge
 router.post(
     "/create",
@@ -45,5 +47,8 @@ router.put(
 );
 // API detail a challenge and its questions
 router.get("/:id", [checkValidToken], handleDetailOneChallenge);
+
+// API introduce a challenge (display maximum 3 questions)
+router.get("/introduce/:id", [checkValidToken], handleIntroduceOneChallene);
 
 export default router;
