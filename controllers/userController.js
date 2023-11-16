@@ -36,50 +36,64 @@ export const handleSignUp = async (req, res) => {
 }; // pending
 
 export const handleSignIn = async (req, res) => {
-    const { user, body } = req;
-    const username = user.username;
-    const maxAttempts = 5;
-    const lockoutTime = 120;
-    const lockoutKey = `lockout: ${username}`;
-    const attemptsKey = `attemps: ${username}`;
+    try {
+        const { user, body } = req;
+        const username = user.username;
+        const maxAttempts = 5;
+        const lockoutTime = 120;
+        const lockoutKey = `lockout: ${username}`;
+        const attemptsKey = `attempts: ${username}`;
 
-    // check if the account is locked
-    const isLock = await redis.get(lockoutKey);
-    if (isLock) {
-        const remainingTime = await redis.ttl(lockoutKey);
-        const minutes = Math.floor(remainingTime / 60);
-        const seconds = remainingTime % 60;
-        if (remainingTime > 0 && minutes > 0) {
-            return res.status(403).json({
-                status: "fail",
-                message: `Account is locked. Please try again after ${minutes} minutes and ${seconds} seconds.`,
-            });
+        // check if the account is locked
+        const isLock = await redis.get(lockoutKey);
+        if (isLock) {
+            const remainingTime = await redis.ttl(lockoutKey);
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            if (remainingTime > 0 && minutes > 0) {
+                return res.status(403).json({
+                    status: "fail",
+                    message: `Account is locked. Please try again after ${minutes} minutes and ${seconds} seconds`,
+                });
+            }
+            if (remainingTime > 0 && minutes <= 0) {
+                return res.status(403).json({
+                    status: "fail",
+                    message: `Account is locked. Please try again after ${seconds} seconds.`,
+                });
+            } else {
+                await redis.del(lockoutKey, attemptsKey);
+            }
         }
-        if (remainingTime > 0 && minutes <= 0) {
-            return res.status(403).json({
-                status: "fail",
-                message: `Account is locked. Please try again after ${seconds} seconds.`,
-            });
-        } else {
-            await redis.del(lockoutKey, attemptsKey);
-        }
-    }
-    bcrypt.compare(body.password, user.password, async (err, isMatch) => {
-        if (err) {
-            return res.status(500).json({ error: "Password comparison error" });
-        }
+
+        const isMatch = await bcrypt.compare(body.password, user.password);
         if (isMatch) {
             await redis.del(attemptsKey);
             const parseUUID = uuidStringify(user.uid);
             const token = jwt.sign({ userId: parseUUID }, "LTT-secret-key");
-            return res.json({ username: user.username, token: token });
+            return res.status(200).json({
+                status: "success",
+                message: "Sign in successfully",
+                username: user.username,
+                token: token,
+            });
         } else {
             let attempts = await redis.incr(attemptsKey);
-            if (attempts == maxAttempts) {
+            if (attempts === maxAttempts) {
                 // Lock the account and set a timer
                 await redis.setex(lockoutKey, lockoutTime, "locked");
             }
-            return res.status(401).json({ error: "Wrong password" });
+            return res.status(401).json({
+                status: "fail",
+                message: "Wrong password",
+            });
         }
-    });
-}; // pending
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error: Unable to sign in",
+        });
+    }
+};
+// pending

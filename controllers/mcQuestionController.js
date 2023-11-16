@@ -110,7 +110,8 @@ export const handleUpdateMCQ = async (req, res) => {
 
         if (notSameIncurrentAnswers.length > 0) {
             for (const item of notSameIncurrentAnswers) {
-                const queryDeleteAnswer = `UPDATE answer SET is_deleted = 1 WHERE uid = '${item.uid}'`;
+                const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item.uid}'`;
+                // const queryDeleteAnswer = `UPDATE answer SET is_deleted = 1 WHERE uid = '${item.uid}'`;
                 await db.execute(queryDeleteAnswer);
             }
         }
