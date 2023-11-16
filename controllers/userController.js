@@ -22,9 +22,16 @@ export const handleSignUp = async (req, res) => {
         // Insert action execution
         await db.execute(query);
         // Return for client-side
-        return res.status(201).json({ message: "User created successfully" });
+        return res.status(201).json({
+            status: "success",
+            message: "User created successfully",
+        });
     } catch (error) {
-        return res.status(500).json({ error: "Internal server error" });
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error: Unable to create an account",
+        });
     }
 }; // pending
 
@@ -42,9 +49,16 @@ export const handleSignIn = async (req, res) => {
         const remainingTime = await redis.ttl(lockoutKey);
         const minutes = Math.floor(remainingTime / 60);
         const seconds = remainingTime % 60;
-        if (remainingTime > 0) {
+        if (remainingTime > 0 && minutes > 0) {
             return res.status(403).json({
+                status: "fail",
                 message: `Account is locked. Please try again after ${minutes} minutes and ${seconds} seconds.`,
+            });
+        }
+        if (remainingTime > 0 && minutes <= 0) {
+            return res.status(403).json({
+                status: "fail",
+                message: `Account is locked. Please try again after ${seconds} seconds.`,
             });
         } else {
             await redis.del(lockoutKey, attemptsKey);

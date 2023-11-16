@@ -21,7 +21,10 @@ export const validateUserSignUp = [
         // Check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            return res.status(400).json({
+                status: "fail",
+                message: errors.array(),
+            });
         }
         next(); // No validation errors, proceed to the next middleware or route
     },
@@ -35,10 +38,17 @@ export const checkExistentAccount = async (req, res, next) => {
     try {
         const [usernameResults] = await db.execute(checkUserQuery);
         if (usernameResults.length > 0) {
-            return res.status(400).json({ error: "Username already in use" });
+            return res.status(400).json({
+                status: "fail",
+                message: "Username already in use",
+            });
         }
     } catch (usernameError) {
-        return res.status(500).json({ error: "Database error" });
+        console.error(usernameError);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal error server",
+        });
     }
 
     // Check email
@@ -46,10 +56,17 @@ export const checkExistentAccount = async (req, res, next) => {
     try {
         const [emailResults] = await db.execute(checkEmailQuery);
         if (emailResults.length > 0) {
-            return res.status(400).json({ error: "Email already in use" });
+            return res.status(400).json({
+                status: "fail",
+                message: "Email already in use",
+            });
         }
     } catch (emailError) {
-        return res.status(500).json({ error: "Database error" });
+        console.error(emailError);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal error server",
+        });
     }
     // If neither username nor email exists, call next() to proceed
     next();
@@ -63,13 +80,19 @@ export const validateUserSignIn = async (req, res, next) => {
     try {
         const [results] = await db.execute(query);
         if (results.length === 0) {
-            return res.status(401).json({ error: "User not found" });
+            return res.status(401).json({
+                status: "fail",
+                message: "User not found",
+            });
         }
         // Attach the user object to the request for later use in the handleSignIn
         req.user = results[0];
         next();
     } catch (error) {
-        return res.status(500).json({ error: "Database error" });
+        return res.status(500).json({
+            status: "error",
+            message: "Database error",
+        });
     }
 }; // (pending)
 
@@ -81,9 +104,10 @@ export const checkSpecialCharactersInUsername = (req, res, next) => {
     // Check if the input string contains any special characters
     if (specialCharRegex.test(inputUsername)) {
         // Special characters found, alert or handle as needed
-        return res
-            .status(400)
-            .json({ error: "Special characters not allowed in Username" });
+        return res.status(400).json({
+            status: "fail",
+            message: "Special characters not allowed in Username",
+        });
     }
 
     // No special characters found, proceed to the next middleware or route handler
