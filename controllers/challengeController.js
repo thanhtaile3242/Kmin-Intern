@@ -5,18 +5,20 @@ import {
     generateQuerySearchFilterChallenge,
     removeSpecialCharactersAndTrim,
     countMatching,
-} from "../utils/utils_MCQ.js";
+    arraysEqual,
+    challengeResult,
+} from "../utils/utils.js";
 
 // Controller for API create a challenge
 export const handleCreateChallenge = async (req, res) => {
     try {
         const userId = req.userId;
         const data = req.body[0];
-        const { name, description, minute, questions } = data;
+        const { name, description, minute, questions, is_public } = data;
         // challenge table
         const challenge_uid = uuidv4();
-        const query1 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`)
-        VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}')`;
+        const query1 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`, \`is_public\` )
+        VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}', '${is_public}')`;
         await db.execute(query1);
         // challenge-detail table
         for (const question of questions) {
@@ -24,7 +26,11 @@ export const handleCreateChallenge = async (req, res) => {
             const query2 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`) VALUES ('${challenge_uid}', '${question_uid}')`;
             await db.execute(query2);
         }
-        // If everything is successful, send a success response
+        // If is_public = 1, automatically create a new assignment which only contain this challange
+        // if (is_public === 1) {
+        //     const assignment_uid = uuidv4();
+        //     const queryA = `INSERT INTO assignment (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`is_public\`) VALUES ('${assignment_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}')`
+        // }
         return res.status(200).json({
             status: "success",
             message: "Challenge created successfully",
@@ -241,6 +247,12 @@ export const handleDetailOneChallenge = async (req, res) => {
             const [resultA] = await db.execute(queryA);
             resultC[0].questions[i].answers = resultA;
         }
+        let a = { ...resultC[0] };
+
+        let b = a.questions;
+        // b.filter((item)=> item.answers)
+
+        console.log(b);
 
         return res.status(200).json({
             status: "success",
@@ -282,6 +294,69 @@ export const handleIntroduceOneChallene = async (req, res) => {
     } catch (error) {
         console.error("Error:", error);
 
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
+        });
+    }
+};
+// Controller for API get result when submit a challenge
+export const handleSumbitChallange = async (req, res) => {
+    try {
+        // Get data
+        const userId = req.userId;
+        const clientData = req.body;
+        const challenge_uid = req.body.challenge_uid;
+
+        // Get a challenge
+        const queryC = `SELECT uid, description FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const [resultC] = await db.execute(queryC);
+
+        if (resultC.length === 0) {
+            return res.status(404).json({
+                status: "fail",
+                data: {
+                    message: "Challenge not found",
+                },
+            });
+        }
+
+        // Get questions
+        const queryQ = `SELECT q.uid FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}'`;
+        const [resultQ] = await db.execute(queryQ);
+        resultC[0].questions = resultQ;
+
+        // Get correct answers (correct = 1)
+        for (let i = 0; i < resultQ.length; i++) {
+            const mc_question_uid = resultC[0].questions[i].uid;
+            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}' AND is_deleted = '0' AND correct = '1'`;
+            const [resultA] = await db.execute(queryA);
+            resultC[0].questions[i].answers = resultA;
+        }
+
+        // System Correct
+        const listQuestions = resultC[0].questions;
+        const systemCorrect = listQuestions.map((question) => ({
+            question_uid: question.uid,
+            correctAnswers: question.answers.map((answer) => answer.uid),
+        }));
+
+        // Create System Data
+        const systemData = {
+            challenge_uid: resultC[0].uid,
+            challenge_description: resultC[0].description,
+            systemAnswers: systemCorrect,
+        };
+
+        // Get the result of the challenge
+        const finalResult = challengeResult(clientData, systemData);
+
+        return res.status(200).json({
+            status: "success",
+            data: finalResult,
+        });
+    } catch (err) {
+        console.error("Error:", err);
         return res.status(500).json({
             status: "error",
             message: "Internal Server Error",

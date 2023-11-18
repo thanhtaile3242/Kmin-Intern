@@ -7,7 +7,9 @@ import {
     generateQuerySearchFilterChallenge,
     removeSpecialCharactersAndTrim,
     countMatching,
-} from "../utils/utils_MCQ.js";
+    arraysEqual,
+    challengeResult,
+} from "../utils/utils.js";
 // Middleware
 import {
     checkValidToken,
@@ -22,6 +24,7 @@ import {
     handleUpdateChallenge,
     handleDetailOneChallenge,
     handleIntroduceOneChallene,
+    handleSumbitChallange,
 } from "../controllers/challengeController.js";
 const router = express.Router();
 
@@ -50,5 +53,8 @@ router.get("/:id", [checkValidToken], handleDetailOneChallenge);
 
 // API introduce a challenge (display maximum 3 questions)
 router.get("/introduce/:id", [checkValidToken], handleIntroduceOneChallene);
+
+// API get result of a challenge
+router.post("/submit", [checkValidToken], handleSumbitChallange);
 
 export default router;

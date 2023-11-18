@@ -6,7 +6,7 @@ import {
     generateQuerySearchFilter,
     countMatching,
     removeSpecialCharactersAndTrim,
-} from "../utils/utils_MCQ.js";
+} from "../utils/utils.js";
 // Middleware
 import {
     checkValidToken,

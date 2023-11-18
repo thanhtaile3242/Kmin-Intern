@@ -70,3 +70,62 @@ export const removeSpecialCharactersAndTrim = (inputString) => {
 
     return trimmedString;
 };
+// Check 2 arrays of systemAnswers and clientAnswers
+export const arraysEqual = (a, b) => {
+    if (a.length !== b.length) return false;
+
+    let aSet = new Set(a);
+    let bSet = new Set(b);
+
+    if (aSet.size !== bSet.size) return false;
+
+    for (let item of aSet) {
+        const aCount = a.filter((val) => val === item).length;
+        const bCount = b.filter((val) => val === item).length;
+        if (aCount !== bCount || !bSet.has(item)) return false;
+    }
+
+    return true;
+};
+// Get the result of challenge
+export const challengeResult = (clientData, systemData) => {
+    if (clientData.challenge_uid !== systemData.challenge_uid) {
+        throw new Error("Challenge UIDs do not match");
+    }
+
+    let result = {
+        challenge_uid: systemData.challenge_uid,
+        challenge_description: systemData.challenge_description,
+        totalCorrect: 0,
+        totalWrong: 0,
+        correctQuestions: [],
+        wrongQuestions: [],
+    };
+
+    clientData["clientAnswers"].forEach((question) => {
+        let systemQuestion = systemData["systemAnswers"].find(
+            (x) => x.question_uid === question.question_uid
+        );
+
+        if (systemQuestion) {
+            if (
+                arraysEqual(question.userAnswer, systemQuestion.correctAnswers)
+            ) {
+                result.totalCorrect++;
+                result.correctQuestions.push({
+                    question_uid: question.question_uid,
+                    correctAnswer: systemQuestion.correctAnswers,
+                });
+            } else {
+                result.totalWrong++;
+                result.wrongQuestions.push({
+                    question_uid: question.question_uid,
+                    correctAnswer: systemQuestion.correctAnswers,
+                    userAnswer: question.userAnswer,
+                });
+            }
+        }
+    });
+
+    return result;
+};

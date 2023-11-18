@@ -6,7 +6,7 @@ import {
     generateQuerySearchFilter,
     removeSpecialCharactersAndTrim,
     countMatching,
-} from "../utils/utils_MCQ.js";
+} from "../utils/utils.js";
 
 // Controller for API create MCQ
 export const handleCreateMCQ = async (req, res) => {

@@ -5,7 +5,7 @@ import { stringify as uuidStringify } from "uuid";
 import {
     removeSpecialCharactersAndTrim,
     removeVietnameseDiacritics,
-} from "../utils/utils_MCQ.js";
+} from "../utils/utils.js";
 // Middleware for multiple choice questions
 export const checkValidToken = async (req, res, next) => {
     try {
