@@ -13,30 +13,44 @@ export const removeVietnameseDiacritics = (str) => {
         })
         .join("");
 };
-// Generate SQL query for search and filter (MCQ)
+// Generate SQL query for search and filter (multiple choice questions)
 export const generateQuerySearchFilter = (keyword, query) => {
-    const keywords = keyword.split(" ");
-
-    const conditionClauses = keywords
-        .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
-        .join(" AND ");
-    let sqlQuery = `SELECT uid, description, name, full_name, level, tag FROM (${query}) AS subquery
-    WHERE ${conditionClauses}`;
-
-    return sqlQuery;
+    if (keyword) {
+        const keywords = keyword.split(" ");
+        const conditionClauses = keywords
+            .map(
+                (kw) =>
+                    `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`
+            )
+            .join(" AND ");
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level, subquery.tag FROM 
+        (${query}) AS subquery JOIN account a ON subquery.account_uid = a.uid WHERE ${conditionClauses}`;
+        return sqlQuery;
+    } else {
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level, subquery.tag FROM 
+        (${query}) AS subquery JOIN account a ON subquery.account_uid = a.uid `;
+        return sqlQuery;
+    }
 };
 // Generate SQL query for search and filter (Challenge)
 export const generateQuerySearchFilterChallenge = (keyword, query) => {
-    const keywords = keyword.split(" ");
+    if (keyword) {
+        const keywords = keyword.split(" ");
+        const conditionClauses = keywords
+            .map(
+                (kw) =>
+                    `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`
+            )
+            .join(" AND ");
 
-    const conditionClauses = keywords
-        .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
-        .join(" AND ");
-
-    let sqlQuery = `SELECT uid, description, name, full_name FROM (${query}) AS subquery
-    WHERE ${conditionClauses}`;
-
-    return sqlQuery;
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
+        return sqlQuery;
+    } else {
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid`;
+        return sqlQuery;
+    }
 };
 // Count matching score
 export const countMatching = (keyWord, Target) => {

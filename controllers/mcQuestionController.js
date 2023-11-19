@@ -13,7 +13,7 @@ export const handleCreateMCQ = async (req, res) => {
     try {
         const userID = req.userId;
         const listQuestion = req.body;
-
+        await db.beginTransaction();
         for (const question of listQuestion) {
             const { name, description, tag, level } = question;
 
@@ -34,11 +34,13 @@ export const handleCreateMCQ = async (req, res) => {
             }
         }
 
+        await db.commit();
         return res.status(201).json({
             status: "success",
             message: "Questions created successfully",
         });
     } catch (error) {
+        await db.rollback();
         console.error(error);
         return res.status(500).json({
             status: "error",
@@ -83,7 +85,8 @@ export const handleUpdateMCQ = async (req, res) => {
         let newAnswers = req.body[0].answers;
         const question_uid = req.params.id.trim();
         const userId = req.userId;
-
+        //
+        await db.beginTransaction();
         const { name, description, tag, level } = newQuestion;
         const queryUpdateQuestion = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}'
         WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
@@ -137,11 +140,13 @@ export const handleUpdateMCQ = async (req, res) => {
             }
         }
 
+        await db.commit();
         return res.status(200).json({
             status: "success",
             message: "Question updated successfully",
         });
     } catch (error) {
+        await db.rollback();
         console.error(error);
         return res
             .status(500)
@@ -165,23 +170,23 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             ? req.query.level
             : "";
 
-        let query = `SELECT uid, description, name, tag, level ,CONCAT(name, " ", description, " ", tag) AS full_name
+        let query = `SELECT account_uid, uid, description, name, tag, level ,CONCAT(name, " ", description, " ", tag) AS full_name
         FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
-        //
+        // if having filter by level of questions
         if (level) {
             query += ` AND level = ${level}`;
         }
-        //
+        // if having sort by name or created_at
         if (sortField && sortOrder) {
             query += ` ORDER BY ${sortField} ${sortOrder}`;
         }
-        //
+        // if having search by keyword
         if (keyword) {
             keyword = removeSpecialCharactersAndTrim(keyword);
             keyword = removeVietnameseDiacritics(keyword);
-            query = generateQuerySearchFilter(keyword, query);
         }
-        //
+        query = generateQuerySearchFilter(keyword, query);
+        // if having paginate
         if (limit && page) {
             const offset = (page - 1) * limit;
             query += ` limit ${limit} offset ${offset}`;
@@ -195,7 +200,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             const [answers] = await db.execute(queryA);
             currentList[i].answers = answers;
         }
-        // Ranking related keyword
+        // Ranking questions base on keyword
         if (keyword) {
             currentList = currentList.map((obj) => {
                 return {
@@ -266,8 +271,8 @@ export const handleDetailOneMCQ = async (req, res) => {
         const question_uid = req.params.id;
 
         // Get a question
-        const queryQ = `SELECT uid, description, name, tag, level 
-        FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}' AND is_deleted = '0'`;
+        const queryQ = `SELECT a.username, q.uid, q.description, q.name, q.tag, q.level 
+        FROM question q JOIN account a ON q.account_uid = a.uid WHERE q.account_uid = UUID_TO_BIN('${userId}') AND q.uid = '${question_uid}' AND q.is_deleted = '0'`;
         const [resultQ] = await db.execute(queryQ);
 
         if (resultQ.length === 0) {

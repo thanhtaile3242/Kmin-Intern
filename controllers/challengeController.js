@@ -94,7 +94,7 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
             ? req.query.level
             : "";
         // Generate the origin query statement
-        let query = `SELECT uid, description, name ,CONCAT( name, " ", description) AS full_name
+        let query = `SELECT creator_uid, uid, description, name , level, CONCAT( name, " ", description) AS full_name
         FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
         // If having filter by level of challenges
         if (level) {
@@ -109,16 +109,16 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
             keyword = keyword.toLowerCase();
             keyword = removeSpecialCharactersAndTrim(keyword);
             keyword = removeVietnameseDiacritics(keyword);
-            query = generateQuerySearchFilterChallenge(keyword, query);
         }
+        // Get query statement
+        query = generateQuerySearchFilterChallenge(keyword, query);
         // if having paginate
         if (limit && page) {
             const offset = (page - 1) * limit;
             query += ` limit ${limit} offset ${offset}`;
         }
-        //Get challenges
+        // Get challenges
         let [currentList, field] = await db.execute(query);
-        console.log(currentList);
         // Get total questions of each challenge
         for (let i = 0; i < currentList.length; i++) {
             const challenge_uid = currentList[i].uid;
@@ -126,7 +126,7 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
             const [questions] = await db.execute(queryQ);
             currentList[i].totalQuestions = questions[0].totalQuestions;
         }
-        // Ranking challenges by keyword
+        // Ranking challenges base on keyword
         if (keyword) {
             currentList = currentList.map((obj) => {
                 return {
@@ -241,10 +241,9 @@ export const handleDetailOneChallenge = async (req, res) => {
     try {
         const userId = req.userId;
         const challenge_uid = req.params.id;
-
         // Get a challenge
-        const queryC = `SELECT uid, description, name 
-            FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const queryC = `SELECT c.uid, c.description, c.name, a.username
+            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.creator_uid = UUID_TO_BIN('${userId}') AND c.uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
         if (resultC.length === 0) {
@@ -289,8 +288,8 @@ export const handleIntroduceOneChallene = async (req, res) => {
         const challenge_uid = req.params.id;
         const userId = req.userId;
 
-        const queryC = `SELECT uid, description, name 
-                FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const queryC = `SELECT c.uid, c.description, c.name, a.username
+            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.creator_uid = UUID_TO_BIN('${userId}') AND c.uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
         if (resultC.length === 0) {
