@@ -114,7 +114,6 @@ export const handleUpdateMCQ = async (req, res) => {
         if (notSameIncurrentAnswers.length > 0) {
             for (const item of notSameIncurrentAnswers) {
                 const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item.uid}'`;
-                // const queryDeleteAnswer = `UPDATE answer SET is_deleted = 1 WHERE uid = '${item.uid}'`;
                 await db.execute(queryDeleteAnswer);
             }
         }
@@ -196,7 +195,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         // Get answers
         for (let i = 0; i < currentList.length; i++) {
             const mc_question_uid = currentList[i].uid;
-            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
+            const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
             const [answers] = await db.execute(queryA);
             currentList[i].answers = answers;
         }
@@ -283,7 +282,7 @@ export const handleDetailOneMCQ = async (req, res) => {
         }
 
         // Get its answers
-        const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${question_uid}'AND is_deleted = '0'`;
+        const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${question_uid}'AND is_deleted = '0'`;
         const [resultA] = await db.execute(queryA);
 
         resultQ[0].answers = resultA;

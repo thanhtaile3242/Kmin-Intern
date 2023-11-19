@@ -147,3 +147,30 @@ export const challengeResult = (clientData, systemData) => {
 
     return result;
 };
+// Get unique fields of object and array
+// export const extractUniqueFields = (arr) => {
+//     const uniqueFields = new Set();
+
+//     function getFields(obj) {
+//         if (typeof obj !== "object" || obj === null) {
+//             return;
+//         }
+
+//         for (const key in obj) {
+//             if (Object.prototype.hasOwnProperty.call(obj, key)) {
+//                 if (!Number.isNaN(Number(key))) {
+//                     // Skip array indices
+//                     getFields(obj[key]);
+//                 } else {
+//                     uniqueFields.add(key);
+//                     getFields(obj[key]);
+//                 }
+//             }
+//         }
+//     }
+
+//     arr.forEach((obj) => {
+//         getFields(obj);
+//     });
+//     return Array.from(uniqueFields);
+// };

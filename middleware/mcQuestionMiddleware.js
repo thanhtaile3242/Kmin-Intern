@@ -95,7 +95,6 @@ export const checkQuestionExistent = async (req, res, next) => {
         const userId = req.userId;
         // Prepare the query using placeholders for parameters
         let query = `SELECT * FROM question WHERE account_uid = UUID_TO_BIN('${userId}')  AND uid = '${question_uid}' AND is_deleted = '0'`;
-
         // Execute the query with the question_uid parameter
         let [result, fields] = await db.execute(query);
 
@@ -158,3 +157,17 @@ export const checkLimitOfMCQ = (req, res, next) => {
     }
     next();
 };
+
+// export const checkFields = (requiredFields) => {
+//     return function (req, res, next) {
+//         const clientData = req.body;
+//         const clientField = new Set(extractUniqueFields(clientData));
+//         console.log(clientField);
+//         for (const item of requiredFields) {
+//             if (!clientField.has(item)) {
+//                 return res.send(`Missing ${item}`);
+//             }
+//         }
+//         next();
+//     };
+// };

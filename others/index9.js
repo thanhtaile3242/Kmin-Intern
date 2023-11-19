@@ -7,7 +7,6 @@ function extractUniqueFields(arr) {
         }
 
         for (const key in obj) {
-            // console.log(key);
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
                 if (!Number.isNaN(Number(key))) {
                     // Skip array indices
@@ -54,18 +53,18 @@ const requiredFields = extractUniqueFields(data);
 
 let requireServer = new Set(requiredFields);
 
+let clientField = [
+    "uid",
+    "aUID",
+    "name",
+    "description",
+    "answers",
+    "noidung",
+    "correct",
+    "order",
+    "lethanhtai",
+];
 function check() {
-    let clientField = [
-        "uid",
-        "aUID",
-        "name",
-        "description",
-        "answers",
-        "noidung",
-        "correct",
-        "order",
-        "lethanhtai",
-    ];
     let clientSet = new Set(clientField);
     for (const item of requiredFields) {
         if (!clientSet.has(item)) {

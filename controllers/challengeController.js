@@ -77,8 +77,8 @@ export const handleDeleteChallenge = async (req, res) => {
         });
     }
 };
-// Controller for API search and filter challenges
-export const handleSearchAndFilterChallenge = async (req, res) => {
+// Controller for API search and filter challenges (solver - public challenges)
+export const handleSearchSolverChallenges = async (req, res) => {
     try {
         const userId = req.userId;
         const page = req.query.page;
@@ -95,7 +95,7 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
             : "";
         // Generate the origin query statement
         let query = `SELECT creator_uid, uid, description, name , level, CONCAT( name, " ", description) AS full_name
-        FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
+        FROM challenge WHERE is_deleted = '0' AND is_public = '1'`;
         // If having filter by level of challenges
         if (level) {
             query += ` AND level = ${level}`;
@@ -122,7 +122,119 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
         // Get total questions of each challenge
         for (let i = 0; i < currentList.length; i++) {
             const challenge_uid = currentList[i].uid;
-            const queryQ = `select count(q.uid) as totalQuestions from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' group by cd.challenge_uid`;
+            const queryQ = `select count(question_uid) as totalQuestions from challenge_detail where challenge_uid = '${challenge_uid}' group by challenge_uid`;
+            const [questions] = await db.execute(queryQ);
+            currentList[i].totalQuestions = questions[0].totalQuestions;
+        }
+        // Ranking challenges base on keyword
+        if (keyword) {
+            currentList = currentList.map((obj) => {
+                return {
+                    ...obj,
+                    full_name: removeVietnameseDiacritics(
+                        obj.full_name
+                    ).toLowerCase(),
+                };
+            });
+
+            // Filter and Ranking the order of the questions in result
+            // First step
+            let filterList = [];
+            let scores = [];
+
+            for (let item of currentList) {
+                const fullName = item.full_name;
+                const score = countMatching(keyword, fullName);
+
+                // If the keyword is similar to fullName, add the item to the array
+                if (score > 0) {
+                    scores.push(score);
+                    filterList.push(item);
+                }
+            }
+
+            // Second step
+            const combinedArray = scores.map((value, index) => ({
+                score: value,
+                question: filterList[index],
+            }));
+            combinedArray.sort((a, b) => b.score - a.score);
+            combinedArray.forEach((item) => {
+                delete item.score;
+            });
+
+            // Get the final list
+            currentList = combinedArray.map((item) => item.question);
+        }
+        currentList.forEach((item) => {
+            delete item.full_name;
+        });
+        //
+        if (currentList.length == 0) {
+            return res.status(400).json({
+                status: "fail",
+                message: "Not challenges found",
+                data: [],
+            });
+        }
+        return res.status(200).json({
+            status: "success",
+            data: currentList,
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
+        });
+    }
+};
+// Controller for API search and filter challenges (creator - public and private challenges)
+export const handleSearchCreatorChallenges = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const page = req.query.page;
+        const limit = req.query.limit;
+        let keyword = req.query.keyword;
+        let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
+            ? req.query.sortOrder
+            : "";
+        let sortField = ["name", "created_at"].includes(req.query.sortField)
+            ? req.query.sortField
+            : "";
+        let level = ["1", "2", "3"].includes(req.query.level)
+            ? req.query.level
+            : "";
+        // Generate the origin query statement
+        let query = `SELECT creator_uid, uid, description, name , level, CONCAT( name, " ", description) AS full_name
+        FROM challenge WHERE is_deleted = '0' AND creator_uid =UUID_TO_BIN('${userId}')`;
+        // If having filter by level of challenges
+        if (level) {
+            query += ` AND level = ${level}`;
+        }
+        // if having sort challenges by name or created_at
+        if (sortField && sortOrder) {
+            query += ` ORDER BY ${sortField} ${sortOrder}`;
+        }
+        // if having search by keyword
+        if (keyword) {
+            keyword = keyword.toLowerCase();
+            keyword = removeSpecialCharactersAndTrim(keyword);
+            keyword = removeVietnameseDiacritics(keyword);
+        }
+        // Get query statement
+        query = generateQuerySearchFilterChallenge(keyword, query);
+        // if having paginate
+        if (limit && page) {
+            const offset = (page - 1) * limit;
+            query += ` limit ${limit} offset ${offset}`;
+        }
+        // Get challenges
+        let [currentList, field] = await db.execute(query);
+        // Get total questions of each challenge
+        for (let i = 0; i < currentList.length; i++) {
+            const challenge_uid = currentList[i].uid;
+            const queryQ = `select count(question_uid) as totalQuestions from challenge_detail where challenge_uid = '${challenge_uid}' group by challenge_uid`;
             const [questions] = await db.execute(queryQ);
             currentList[i].totalQuestions = questions[0].totalQuestions;
         }
@@ -220,8 +332,8 @@ export const handleUpdateChallenge = async (req, res) => {
         const { name, description, minute } = newChallenge;
         const query = `UPDATE challenge SET name = '${name}', description = '${description}', minute = '${minute}', level = '${level}'
         WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
-        await db.execute(query);
-
+        let [result1] = await db.execute(query);
+        console.log(result1);
         await db.commit();
         return res.status(200).json({
             status: "success",
@@ -327,11 +439,11 @@ export const handleSumbitChallange = async (req, res) => {
     try {
         // Get data
         const userId = req.userId;
-        const clientData = req.body;
-        const challenge_uid = req.body.challenge_uid;
+        const clientData = req.body[0];
+        const challenge_uid = req.body[0].challenge_uid;
 
         // Get a challenge
-        const queryC = `SELECT uid, description FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const queryC = `SELECT uid, description FROM challenge WHERE uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
         if (resultC.length === 0) {
