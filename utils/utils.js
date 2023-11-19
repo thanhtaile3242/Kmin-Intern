@@ -32,6 +32,7 @@ export const generateQuerySearchFilterChallenge = (keyword, query) => {
     const conditionClauses = keywords
         .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
         .join(" AND ");
+
     let sqlQuery = `SELECT uid, description, name, full_name FROM (${query}) AS subquery
     WHERE ${conditionClauses}`;
 

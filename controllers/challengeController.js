@@ -15,27 +15,33 @@ export const handleCreateChallenge = async (req, res) => {
         const userId = req.userId;
         const data = req.body[0];
         const { name, description, minute, questions, is_public } = data;
-        // challenge table
+        // Insert data
+        await db.beginTransaction();
+
         const challenge_uid = uuidv4();
-        const query1 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`, \`is_public\` )
-        VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}', '${is_public}')`;
-        await db.execute(query1);
-        // challenge-detail table
+        // Challenge-detail table
         for (const question of questions) {
-            const { question_uid } = question;
-            const query2 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`) VALUES ('${challenge_uid}', '${question_uid}')`;
-            await db.execute(query2);
+            const { question_uid, weight } = question;
+            const query1 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`, \`weight\`) VALUES ('${challenge_uid}', '${question_uid}', '${weight}')`;
+            await db.execute(query1);
         }
-        // If is_public = 1, automatically create a new assignment which only contain this challange
-        // if (is_public === 1) {
-        //     const assignment_uid = uuidv4();
-        //     const queryA = `INSERT INTO assignment (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`is_public\`) VALUES ('${assignment_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}')`
-        // }
+        // Calculate the level of challenge
+        const queryLevel = `select AVG(q.level) as average from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' 
+        group by cd.challenge_uid;`;
+        const [resultLevel] = await db.execute(queryLevel);
+        const level = Math.round(resultLevel[0].average);
+        // Challenge table
+        const query2 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`, \`is_public\`, \`level\` )
+        VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}', '${is_public}', '${level}')`;
+        await db.execute(query2);
+
+        await db.commit();
         return res.status(200).json({
             status: "success",
             message: "Challenge created successfully",
         });
     } catch (error) {
+        await db.rollback();
         console.error("Error creating challenge:", error);
         return res.status(500).json({
             status: "error",
@@ -54,9 +60,9 @@ export const handleDeleteChallenge = async (req, res) => {
         const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
         await db.execute(queryDeleteC);
         // challenge_detail table
-        const queryDeleteCD = `UPDATE challenge_detail SET is_deleted = 1 WHERE challenge_uid = '${challenge_uid}'`;
+        const queryDeleteCD = `DELETE FROM challenge_detail WHERE challenge_uid = '${challenge_uid}'`;
         await db.execute(queryDeleteCD);
-        //
+
         await db.commit();
         return res.status(200).json({
             status: "success",
@@ -84,39 +90,43 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
         let sortField = ["name", "created_at"].includes(req.query.sortField)
             ? req.query.sortField
             : "";
-        let query = `SELECT uid, description, name ,CONCAT(name, " ", description) AS full_name
+        let level = ["1", "2", "3"].includes(req.query.level)
+            ? req.query.level
+            : "";
+        // Generate the origin query statement
+        let query = `SELECT uid, description, name ,CONCAT( name, " ", description) AS full_name
         FROM challenge WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
-        //
+        // If having filter by level of challenges
+        if (level) {
+            query += ` AND level = ${level}`;
+        }
+        // if having sort challenges by name or created_at
         if (sortField && sortOrder) {
             query += ` ORDER BY ${sortField} ${sortOrder}`;
         }
-        //
+        // if having search by keyword
         if (keyword) {
+            keyword = keyword.toLowerCase();
             keyword = removeSpecialCharactersAndTrim(keyword);
             keyword = removeVietnameseDiacritics(keyword);
             query = generateQuerySearchFilterChallenge(keyword, query);
         }
-        //
+        // if having paginate
         if (limit && page) {
             const offset = (page - 1) * limit;
             query += ` limit ${limit} offset ${offset}`;
         }
-        //Get challenge
+        //Get challenges
         let [currentList, field] = await db.execute(query);
-        // Get Questions and Answers
+        console.log(currentList);
+        // Get total questions of each challenge
         for (let i = 0; i < currentList.length; i++) {
             const challenge_uid = currentList[i].uid;
-            const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}'`;
+            const queryQ = `select count(q.uid) as totalQuestions from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' group by cd.challenge_uid`;
             const [questions] = await db.execute(queryQ);
-            currentList[i].questions = questions;
-            for (let k = 0; k < currentList[i].questions.length; k++) {
-                const mc_question_uid = currentList[i].questions[k].uid;
-                const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
-                const [answers] = await db.execute(queryA);
-                currentList[i].questions[k].answers = answers;
-            }
+            currentList[i].totalQuestions = questions[0].totalQuestions;
         }
-        // Ranking by keyword
+        // Ranking challenges by keyword
         if (keyword) {
             currentList = currentList.map((obj) => {
                 return {
@@ -126,6 +136,7 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
                     ).toLowerCase(),
                 };
             });
+
             // Filter and Ranking the order of the questions in result
             // First step
             let filterList = [];
@@ -147,7 +158,6 @@ export const handleSearchAndFilterChallenge = async (req, res) => {
                 score: value,
                 question: filterList[index],
             }));
-
             combinedArray.sort((a, b) => b.score - a.score);
             combinedArray.forEach((item) => {
                 delete item.score;
@@ -186,12 +196,7 @@ export const handleUpdateChallenge = async (req, res) => {
         const challenge_uid = req.params.id;
         const newChallenge = req.body[0];
         const newQuestions = newChallenge.questions;
-
-        // Update information of a challenge
-        const { name, description, minute } = newChallenge;
-        const query = `UPDATE challenge SET name = '${name}', description = '${description}', minute = '${minute}'
-        WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
-        await db.execute(query);
+        await db.beginTransaction();
 
         // Delete all old questions in a challenge
         const query1 = `DELETE FROM challenge_detail WHERE challenge_uid = '${challenge_uid}'`;
@@ -199,18 +204,32 @@ export const handleUpdateChallenge = async (req, res) => {
 
         // Insert all new questions in a challenge
         for (const question of newQuestions) {
-            const { question_uid } = question;
-            const query2 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`)
-            VALUES ('${challenge_uid}', '${question_uid}')`;
+            const { question_uid, weight } = question;
+            const query2 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`, \`weight\`)
+            VALUES ('${challenge_uid}', '${question_uid}', '${weight}')`;
             await db.execute(query2);
         }
 
+        // Calculate the level of challenge
+        const queryLevel = `select AVG(q.level) as average from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' 
+        group by cd.challenge_uid;`;
+        const [resultLevel] = await db.execute(queryLevel);
+        const level = Math.round(resultLevel[0].average);
+
+        // Update information of a challenge
+        const { name, description, minute } = newChallenge;
+        const query = `UPDATE challenge SET name = '${name}', description = '${description}', minute = '${minute}', level = '${level}'
+        WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
+        await db.execute(query);
+
+        await db.commit();
         return res.status(200).json({
             status: "success",
             message: "Challenge updated successfully",
         });
     } catch (error) {
-        console.error(error);
+        await db.rollback();
+        console.error("Error updating challenge:", error);
         return res.status(500).json({
             status: "error",
             message: "Error updating challenge",
@@ -234,6 +253,10 @@ export const handleDetailOneChallenge = async (req, res) => {
                 message: "Challenge not found",
             });
         }
+        // Calculate total questions
+        const queryTQ = `select count(q.uid) as totalQuestions from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' group by cd.challenge_uid`;
+        const [resultTQ] = await db.execute(queryTQ);
+        resultC[0].totalQuestions = resultTQ[0].totalQuestions;
 
         // Get questions
         const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}'`;
@@ -243,16 +266,10 @@ export const handleDetailOneChallenge = async (req, res) => {
         // Get answers
         for (let i = 0; i < resultQ.length; i++) {
             const mc_question_uid = resultC[0].questions[i].uid;
-            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
+            const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
             const [resultA] = await db.execute(queryA);
             resultC[0].questions[i].answers = resultA;
         }
-        let a = { ...resultC[0] };
-
-        let b = a.questions;
-        // b.filter((item)=> item.answers)
-
-        console.log(b);
 
         return res.status(200).json({
             status: "success",
@@ -283,7 +300,13 @@ export const handleIntroduceOneChallene = async (req, res) => {
             });
         }
 
-        const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' limit 3`;
+        // Get total number of questions
+        const queryN = `select count(q.uid) as totalQuestions from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' group by cd.challenge_uid`;
+        const [questions] = await db.execute(queryN);
+        resultC[0].totalQuestions = questions[0].totalQuestions;
+
+        // Get 3 questions for review
+        const queryQ = `select q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' limit 3`;
         const [resultQ] = await db.execute(queryQ);
         resultC[0].questions = resultQ;
 

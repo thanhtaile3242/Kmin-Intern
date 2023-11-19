@@ -55,6 +55,10 @@ router.get("/:id", [checkValidToken], handleDetailOneChallenge);
 router.get("/introduce/:id", [checkValidToken], handleIntroduceOneChallene);
 
 // API get result of a challenge
-router.post("/submit", [checkValidToken], handleSumbitChallange);
+router.post(
+    "/submit",
+    [checkValidToken, checkEmptyData],
+    handleSumbitChallange
+);
 
 export default router;
