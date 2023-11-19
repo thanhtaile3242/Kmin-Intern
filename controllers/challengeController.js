@@ -315,9 +315,7 @@ export const handleSumbitChallange = async (req, res) => {
         if (resultC.length === 0) {
             return res.status(404).json({
                 status: "fail",
-                data: {
-                    message: "Challenge not found",
-                },
+                message: "Challenge not found",
             });
         }
 

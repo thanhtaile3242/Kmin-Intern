@@ -109,19 +109,22 @@ export const challengeResult = (clientData, systemData) => {
 
         if (systemQuestion) {
             if (
-                arraysEqual(question.userAnswer, systemQuestion.correctAnswers)
+                arraysEqual(
+                    question.clientAnswer,
+                    systemQuestion.correctAnswers
+                )
             ) {
                 result.totalCorrect++;
                 result.correctQuestions.push({
-                    question_uid: question.question_uid,
+                    question_uid: systemQuestion.question_uid,
                     correctAnswer: systemQuestion.correctAnswers,
                 });
             } else {
                 result.totalWrong++;
                 result.wrongQuestions.push({
-                    question_uid: question.question_uid,
+                    question_uid: systemQuestion.question_uid,
                     correctAnswer: systemQuestion.correctAnswers,
-                    userAnswer: question.userAnswer,
+                    clientAnswer: question.clientAnswer,
                 });
             }
         }
