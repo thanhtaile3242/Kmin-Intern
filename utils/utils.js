@@ -43,11 +43,11 @@ export const generateQuerySearchFilterChallenge = (keyword, query) => {
             )
             .join(" AND ");
 
-        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
+        const sqlQuery = `SELECT a.username, subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
         (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
         return sqlQuery;
     } else {
-        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
         (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid`;
         return sqlQuery;
     }

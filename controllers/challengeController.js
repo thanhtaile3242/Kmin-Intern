@@ -26,11 +26,12 @@ export const handleCreateChallenge = async (req, res) => {
             await db.execute(query1);
         }
         // Calculate the level of challenge
-        const queryLevel = `select AVG(q.level) as average from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' 
-        group by cd.challenge_uid;`;
+        const queryLevel = `SELECT AVG(q.level) as average FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}'
+        GROUP BY cd.challenge_uid;`;
         const [resultLevel] = await db.execute(queryLevel);
         const level = Math.round(resultLevel[0].average);
         // Challenge table
+
         const query2 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`, \`is_public\`, \`level\` )
         VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}', '${is_public}', '${level}')`;
         await db.execute(query2);
@@ -77,8 +78,8 @@ export const handleDeleteChallenge = async (req, res) => {
         });
     }
 };
-// Controller for API search and filter challenges (solver - public challenges)
-export const handleSearchSolverChallenges = async (req, res) => {
+// Controller for API search and filter public challenges (solver and creator)
+export const handleSearchPublicChallenges = async (req, res) => {
     try {
         const userId = req.userId;
         const page = req.query.page;
@@ -122,7 +123,7 @@ export const handleSearchSolverChallenges = async (req, res) => {
         // Get total questions of each challenge
         for (let i = 0; i < currentList.length; i++) {
             const challenge_uid = currentList[i].uid;
-            const queryQ = `select count(question_uid) as totalQuestions from challenge_detail where challenge_uid = '${challenge_uid}' group by challenge_uid`;
+            const queryQ = `SELECT count(question_uid) as totalQuestions FROM challenge_detail WHERE challenge_uid = '${challenge_uid}' GROUP BY challenge_uid`;
             const [questions] = await db.execute(queryQ);
             currentList[i].totalQuestions = questions[0].totalQuestions;
         }
@@ -189,8 +190,8 @@ export const handleSearchSolverChallenges = async (req, res) => {
         });
     }
 };
-// Controller for API search and filter challenges (creator - public and private challenges)
-export const handleSearchCreatorChallenges = async (req, res) => {
+// Controller for API search and filter challenges-owned (creator - public and private challenges)
+export const handleSearchChallengesOwned = async (req, res) => {
     try {
         const userId = req.userId;
         const page = req.query.page;
@@ -206,7 +207,7 @@ export const handleSearchCreatorChallenges = async (req, res) => {
             ? req.query.level
             : "";
         // Generate the origin query statement
-        let query = `SELECT creator_uid, uid, description, name , level, CONCAT( name, " ", description) AS full_name
+        let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
         FROM challenge WHERE is_deleted = '0' AND creator_uid =UUID_TO_BIN('${userId}')`;
         // If having filter by level of challenges
         if (level) {
@@ -234,7 +235,7 @@ export const handleSearchCreatorChallenges = async (req, res) => {
         // Get total questions of each challenge
         for (let i = 0; i < currentList.length; i++) {
             const challenge_uid = currentList[i].uid;
-            const queryQ = `select count(question_uid) as totalQuestions from challenge_detail where challenge_uid = '${challenge_uid}' group by challenge_uid`;
+            const queryQ = `SELECT count(question_uid) as totalQuestions FROM challenge_detail WHERE challenge_uid = '${challenge_uid}' GROUP BY challenge_uid`;
             const [questions] = await db.execute(queryQ);
             currentList[i].totalQuestions = questions[0].totalQuestions;
         }
@@ -323,8 +324,8 @@ export const handleUpdateChallenge = async (req, res) => {
         }
 
         // Calculate the level of challenge
-        const queryLevel = `select AVG(q.level) as average from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' 
-        group by cd.challenge_uid;`;
+        const queryLevel = `SELECT AVG(q.level) as average FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' 
+        GROUP BY cd.challenge_uid;`;
         const [resultLevel] = await db.execute(queryLevel);
         const level = Math.round(resultLevel[0].average);
 
@@ -365,12 +366,12 @@ export const handleDetailOneChallenge = async (req, res) => {
             });
         }
         // Calculate total questions
-        const queryTQ = `select count(q.uid) as totalQuestions from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' group by cd.challenge_uid`;
+        const queryTQ = `SELECT count(q.uid) as totalQuestions FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' GROUP BY cd.challenge_uid`;
         const [resultTQ] = await db.execute(queryTQ);
         resultC[0].totalQuestions = resultTQ[0].totalQuestions;
 
         // Get questions
-        const queryQ = `select q.uid ,q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}'`;
+        const queryQ = `SELECT q.uid ,q.name, q.description FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}'`;
         const [resultQ] = await db.execute(queryQ);
         resultC[0].questions = resultQ;
 
@@ -412,7 +413,7 @@ export const handleIntroduceOneChallene = async (req, res) => {
         }
 
         // Get total number of questions
-        const queryN = `select count(q.uid) as totalQuestions from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' group by cd.challenge_uid`;
+        const queryN = `SELECT count(q.uid) as totalQuestions FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' GROUP BY cd.challenge_uid`;
         const [questions] = await db.execute(queryN);
         resultC[0].totalQuestions = questions[0].totalQuestions;
 
