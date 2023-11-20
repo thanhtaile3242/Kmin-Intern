@@ -355,7 +355,7 @@ export const handleDetailOneChallenge = async (req, res) => {
         const challenge_uid = req.params.id;
         // Get a challenge
         const queryC = `SELECT c.uid, c.description, c.name, a.username
-            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.creator_uid = UUID_TO_BIN('${userId}') AND c.uid = '${challenge_uid}' AND is_deleted = '0'`;
+            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
         if (resultC.length === 0) {
@@ -401,7 +401,7 @@ export const handleIntroduceOneChallene = async (req, res) => {
         const userId = req.userId;
 
         const queryC = `SELECT c.uid, c.description, c.name, a.username
-            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.creator_uid = UUID_TO_BIN('${userId}') AND c.uid = '${challenge_uid}' AND is_deleted = '0'`;
+            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
         if (resultC.length === 0) {
