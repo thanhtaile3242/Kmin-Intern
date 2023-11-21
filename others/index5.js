@@ -4,6 +4,18 @@ function normalizeVietnameseWord(word) {
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
 }
+const removeSpecialCharactersAndTrim = (inputString) => {
+    // Define a regular expression to match special characters
+    const regex = /[.,\/?\\$£@#!%^&*;:{}=\-+_`~()]/g;
+
+    // Use the replace method to remove special characters from the input string
+    const resultString = inputString.replace(regex, "");
+
+    // Use the trim method to remove leading and trailing whitespace
+    const trimmedString = resultString.trim();
+
+    return trimmedString;
+};
 
 function extractUniqueWords(inputString) {
     const wordsArray = inputString.split(" ");
@@ -28,6 +40,7 @@ function extractUniqueWords(inputString) {
     return uniqueWordsString;
 }
 
-const inputString = "toán 12 toán đại số";
+const inputString = "lịch sử 12; lịch sử Việt Nam; Việt Nam năm 1980";
 const uniqueWordsResult = extractUniqueWords(inputString);
-console.log(uniqueWordsResult); // Output: "lịch sử Việt Nam chương 10"
+
+console.log(removeSpecialCharactersAndTrim(uniqueWordsResult)); // Output: "lịch sử Việt Nam chương 10"

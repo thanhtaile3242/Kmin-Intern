@@ -32,7 +32,74 @@ function getDuplicateWords(arr) {
 
     return result;
 }
+function getDuplicateWords1(arr) {
+    const wordCount = {};
 
+    // Count occurrences of words in the array
+    for (const sentence of arr) {
+        const words = sentence.split(" ");
+
+        const uniqueWords = new Set(); // To store unique words in each sentence
+
+        for (const word of words) {
+            // Normalize the word to lowercase for case-insensitive comparison
+            const normalizedWord = word.toLowerCase();
+
+            if (!uniqueWords.has(normalizedWord)) {
+                uniqueWords.add(normalizedWord); // Add unique words to the set
+                if (wordCount[normalizedWord]) {
+                    wordCount[normalizedWord]++;
+                } else {
+                    wordCount[normalizedWord] = 1;
+                }
+            }
+        }
+    }
+
+    // Filter words that appear two times or more in the array
+    const duplicates = Object.keys(wordCount).filter(
+        (word) => wordCount[word] >= 3
+    );
+
+    // Reconstruct the string with duplicate words
+    const result = duplicates.join(" ");
+
+    return result;
+}
+function getDuplicateWords2(arr) {
+    const wordCount = {};
+
+    // Count occurrences of words in the array
+    for (const sentence of arr) {
+        const words = sentence.split(" ");
+
+        const uniqueWords = new Set(); // To store unique words in each sentence
+
+        for (const word of words) {
+            // Normalize the word to lowercase for case-insensitive comparison
+            const normalizedWord = word.toLowerCase();
+
+            if (!uniqueWords.has(normalizedWord)) {
+                uniqueWords.add(normalizedWord); // Add unique words to the set
+                if (wordCount[normalizedWord]) {
+                    wordCount[normalizedWord]++;
+                } else {
+                    wordCount[normalizedWord] = 1;
+                }
+            }
+        }
+    }
+
+    // Filter words that appear two times or more in the array
+    const duplicates = Object.keys(wordCount).filter(
+        (word) => wordCount[word] >= 4
+    );
+
+    // Reconstruct the string with duplicate words
+    const result = duplicates.join(" ");
+
+    return result;
+}
 const array = [
     "toán 12 đại số chương 1",
     "toán 12 hàm số",
@@ -40,10 +107,18 @@ const array = [
     "toán cực trị hàm số",
     "toán giá trị cực tiểu của hàm số",
     "hàm số liên tục cực đại",
+    "Đại số 12; hàm số",
+    "cực trị hàm số",
 ];
 
-// const duplicateWordsString = getDuplicateWords(array);
-// console.log(duplicateWordsString); // Output: "toán 12 hàm số của"
+const duplicateWordsString = getDuplicateWords(array);
+const duplicateWordsString1 = getDuplicateWords1(array);
+const duplicateWordsString2 = getDuplicateWords2(array);
+
+console.log("Xuất hiện 2 lần: ", duplicateWordsString);
+console.log("Xuất hiện 3 lần: ", duplicateWordsString1);
+console.log("Xuất hiện 4 lần: ", duplicateWordsString2);
+// Output: "toán 12 hàm số của"
 // Function to change the first character of every word to uppercase
 
 // Function to convert to turbo's notation
@@ -81,5 +156,3 @@ function getNouns(str) {
 }
 
 // test string
-var str = "lê thành tài long an tại việt nam";
-console.log(getNouns(str));

@@ -56,12 +56,14 @@ export const handleDeleteMCQ = async (req, res) => {
 
         const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         const queryDeleteA = `UPDATE answer SET is_deleted = 1 WHERE mc_question_uid = '${question_uid}'`;
-
+        const queryDeleteC = `DELETE FROM challenge_detail WHERE question_uid = '${question_uid}'`;
         await db.beginTransaction();
 
         await db.execute(queryDeleteQ);
 
         await db.execute(queryDeleteA);
+
+        await db.execute(queryDeleteC);
 
         await db.commit();
 
@@ -113,7 +115,7 @@ export const handleUpdateMCQ = async (req, res) => {
 
         if (notSameIncurrentAnswers.length > 0) {
             for (const item of notSameIncurrentAnswers) {
-                const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item.uid}'`;
+                const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item.uid}' AND mc_question_uid = '${question_uid}'`;
                 await db.execute(queryDeleteAnswer);
             }
         }
@@ -122,7 +124,7 @@ export const handleUpdateMCQ = async (req, res) => {
             for (const item of sameInnewAnswers) {
                 const { uid, order_answer, description, correct } = item;
                 const queryUpdateAnswer = `UPDATE answer SET order_answer = '${order_answer}', description = '${description}', correct = '${correct}'
-                WHERE uid = '${uid}'`;
+                WHERE uid = '${uid}' AND mc_question_uid = '${question_uid}'`;
                 await db.execute(queryUpdateAnswer);
             }
         }

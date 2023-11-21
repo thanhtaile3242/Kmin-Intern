@@ -12,6 +12,7 @@ import {
 // Controller for API create a challenge
 export const handleCreateChallenge = async (req, res) => {
     try {
+        // 1. Get data from client
         const userId = req.userId;
         const data = req.body[0];
         const { name, description, minute, questions, is_public } = data;
@@ -19,22 +20,31 @@ export const handleCreateChallenge = async (req, res) => {
         await db.beginTransaction();
 
         const challenge_uid = uuidv4();
-        // Challenge-detail table
+        // 2. challenge-detail table
         for (const question of questions) {
             const { question_uid, weight } = question;
             const query1 = `INSERT INTO challenge_detail (\`challenge_uid\`, \`question_uid\`, \`weight\`) VALUES ('${challenge_uid}', '${question_uid}', '${weight}')`;
             await db.execute(query1);
         }
-        // Calculate the level of challenge
+        // 3. Calculate the level of challenge
         const queryLevel = `SELECT AVG(q.level) as average FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}'
         GROUP BY cd.challenge_uid;`;
         const [resultLevel] = await db.execute(queryLevel);
         const level = Math.round(resultLevel[0].average);
-        // Challenge table
 
+        // 4. challenge table
         const query2 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`, \`is_public\`, \`level\` )
         VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}', '${is_public}', '${level}')`;
         await db.execute(query2);
+
+        // 5. assignment table
+        const assignment_uid = uuidv4();
+        const queryAssign = `INSERT INTO assignment (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`is_public\`)
+            VALUES ('${assignment_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${is_public}')`;
+        await db.execute(queryAssign);
+        // 6. Assignment detail table
+        const queryAD = `INSERT INTO assignment_detail (\`challenge_uid\`, \`assignment_uid\`) VALUES ('${challenge_uid}', '${assignment_uid}')`;
+        await db.execute(queryAD);
 
         await db.commit();
         return res.status(200).json({
@@ -54,15 +64,39 @@ export const handleCreateChallenge = async (req, res) => {
 export const handleDeleteChallenge = async (req, res) => {
     try {
         await db.beginTransaction();
-        // Get data
+        // 1. Get data from client
         const userId = req.userId;
         const challenge_uid = req.params.id.trim();
-        // challenge table
+        // 2. challenge table (soft-delete)
         const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
         await db.execute(queryDeleteC);
-        // challenge_detail table
-        const queryDeleteCD = `DELETE FROM challenge_detail WHERE challenge_uid = '${challenge_uid}'`;
+
+        // 3. challenge_detail table (soft-delete)
+        const queryDeleteCD = `UPDATE challenge_detail SET is_deleted = 1 WHERE challenge_uid = '${challenge_uid}'`;
         await db.execute(queryDeleteCD);
+
+        // 4. assignment table
+        // Step 1: Get all assignments contain this challenge
+        // Step 2: Count the number of challenges in each assignment
+        // Step 3: Soft-delete with assignment having 1 challenge (assignment table)
+        const queryAS = `SELECT * FROM assignment_detail ad WHERE ad.challenge_uid = '${challenge_uid}'`;
+        const [resultAS] = await db.execute(queryAS);
+
+        for (const assignment of resultAS) {
+            const assignment_uid = assignment.assignment_uid;
+            const queryCount = `SELECT COUNT(ad.challenge_uid) as count, ad.assignment_uid FROM assignment_detail ad WHERE ad.assignment_uid  = '${assignment_uid}' AND is_deleted = '0' GROUP BY ad.assignment_uid`;
+            const [resultCount] = await db.execute(queryCount);
+            const numberChallenge = resultCount[0]?.count;
+
+            if (numberChallenge == 1) {
+                const queryASoftDelete = `UPDATE assignment SET is_deleted = '1' WHERE uid = '${assignment_uid}'`;
+                await db.execute(queryASoftDelete);
+            }
+        }
+
+        // 5. assignment_detail table (soft-delete)
+        const queryADSoftDelete = `UPDATE assignment_detail SET is_deleted = '1' WHERE challenge_uid = '${challenge_uid}'`;
+        await db.execute(queryADSoftDelete);
 
         await db.commit();
         return res.status(200).json({
@@ -95,7 +129,7 @@ export const handleSearchPublicChallenges = async (req, res) => {
             ? req.query.level
             : "";
         // Generate the origin query statement
-        let query = `SELECT creator_uid, uid, description, name , level, CONCAT( name, " ", description) AS full_name
+        let query = `SELECT creator_uid, uid, description, name , level, is_public, CONCAT( name, " ", description) AS full_name
         FROM challenge WHERE is_deleted = '0' AND is_public = '1'`;
         // If having filter by level of challenges
         if (level) {
@@ -306,7 +340,7 @@ export const handleSearchChallengesOwned = async (req, res) => {
 export const handleUpdateChallenge = async (req, res) => {
     try {
         const userId = req.userId;
-        const challenge_uid = req.params.id;
+        const challenge_uid = req.params.id.trim();
         const newChallenge = req.body[0];
         const newQuestions = newChallenge.questions;
         await db.beginTransaction();
@@ -323,18 +357,26 @@ export const handleUpdateChallenge = async (req, res) => {
             await db.execute(query2);
         }
 
-        // Calculate the level of challenge
-        const queryLevel = `SELECT AVG(q.level) as average FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' 
+        // Calculate the level of challenge (update level of a challenge)
+        const queryLevel = `SELECT AVG(q.level) as average FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}'
         GROUP BY cd.challenge_uid;`;
         const [resultLevel] = await db.execute(queryLevel);
         const level = Math.round(resultLevel[0].average);
 
         // Update information of a challenge
-        const { name, description, minute } = newChallenge;
-        const query = `UPDATE challenge SET name = '${name}', description = '${description}', minute = '${minute}', level = '${level}'
+        const { name, description, minute, is_public } = newChallenge;
+        const queryC = `UPDATE challenge SET name = '${name}', description = '${description}', minute = '${minute}', level = '${level}', is_public ='${is_public}'
         WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
-        let [result1] = await db.execute(query);
-        console.log(result1);
+        let [result1] = await db.execute(queryC);
+
+        // Update information of an assignment
+        const queryAS = `select * from assignment_detail ad  where ad.challenge_uid = '${challenge_uid}'`;
+        const [resultAS] = await db.execute(queryAS);
+        const assignment_uid = resultAS[0].assignment_uid;
+        const updateAS = `UPDATE assignment SET name = '${name}', description = '${description}', is_public ='${is_public}'
+        WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${assignment_uid}'`;
+        await db.execute(updateAS);
+
         await db.commit();
         return res.status(200).json({
             status: "success",
@@ -418,7 +460,7 @@ export const handleIntroduceOneChallene = async (req, res) => {
         resultC[0].totalQuestions = questions[0].totalQuestions;
 
         // Get 3 questions for review
-        const queryQ = `select q.name, q.description from challenge_detail cd join question q on cd.question_uid = q.uid where cd.challenge_uid = '${challenge_uid}' limit 3`;
+        const queryQ = `SELECT q.name, q.description FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' limit 3`;
         const [resultQ] = await db.execute(queryQ);
         resultC[0].questions = resultQ;
 
