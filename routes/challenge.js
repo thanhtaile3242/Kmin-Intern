@@ -22,8 +22,7 @@ import { checkChallengeExistent } from "../middleware/challengeMiddleware.js";
 import {
     handleCreateChallenge,
     handleDeleteChallenge,
-    handleSearchPublicChallenges,
-    handleSearchChallengesOwned,
+    handleSearchChallenges,
     handleUpdateChallenge,
     handleDetailOneChallenge,
     handleIntroduceOneChallene,
@@ -42,10 +41,9 @@ router.delete(
     [checkValidToken, checkChallengeExistent],
     handleDeleteChallenge
 );
-// API search and filter challenges (solver - public challenges)
-router.get("/searchSolver", [checkValidToken], handleSearchPublicChallenges);
-// API search and filter challenges (creator - public and private challenges)
-router.get("/searchCreator", [checkValidToken], handleSearchChallengesOwned);
+// API search and filter challenges (public and private)
+router.get("/searchCreator", [checkValidToken], handleSearchChallenges);
+
 // API update a challenge
 router.put(
     "/edit/:id",

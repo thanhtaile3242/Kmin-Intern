@@ -51,19 +51,40 @@ export const handleCreateMCQ = async (req, res) => {
 // Controller for API delete MCQ (soft-delete)
 export const handleDeleteMCQ = async (req, res) => {
     try {
-        const question_uid = req.params.id.trim();
-        const userId = req.userId;
-
-        const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
-        const queryDeleteA = `UPDATE answer SET is_deleted = 1 WHERE mc_question_uid = '${question_uid}'`;
-        const queryDeleteC = `DELETE FROM challenge_detail WHERE question_uid = '${question_uid}'`;
         await db.beginTransaction();
+        // 1. Get data from client
+        const userId = req.userId;
+        const question_uid = req.params.id.trim();
 
+        // 2. question table (soft delete)
+        const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         await db.execute(queryDeleteQ);
 
+        // 3. answer table (delete)
+        const queryDeleteA = `DELETE FROM answer WHERE mc_question_uid = '${question_uid}'`;
         await db.execute(queryDeleteA);
 
-        await db.execute(queryDeleteC);
+        // 4. challenge_detail table
+        // Step 1: Get all challenges contain this question
+        // Step 2: Count the number of questions in each challenge
+        // Step 3: Soft-delete with challenge having 1 question (Check if)
+        const queryCD = `SELECT * FROM challenge_detail WHERE question_uid = '${question_uid}'`;
+        const [resultCD] = await db.execute(queryCD);
+        for (const challenge of resultCD) {
+            const challenge_uid = challenge.challenge_uid;
+
+            const queryCount = `SELECT COUNT(question_uid) as count, challenge_uid FROM challenge_detail WHERE challenge_uid  = '${challenge_uid}' AND is_deleted = '0' GROUP BY challenge_uid`;
+            const [resultCount] = await db.execute(queryCount);
+            const numberChallenge = resultCount[0]?.count;
+            if (numberChallenge == 1) {
+                // console.log(challenge_uid);
+                const queryASoftDelete = `UPDATE challenge SET is_deleted = '1' WHERE uid = '${challenge_uid}'`;
+                await db.execute(queryASoftDelete);
+            }
+        }
+        // 5. challenge_detail table (soft-delete)
+        const queryADSoftDelete = `UPDATE challenge_detail SET is_deleted = '1' WHERE question_uid = '${question_uid}'`;
+        await db.execute(queryADSoftDelete);
 
         await db.commit();
 
@@ -83,36 +104,44 @@ export const handleDeleteMCQ = async (req, res) => {
 // Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
     try {
-        const newQuestion = req.body[0];
-        let newAnswers = req.body[0].answers;
-        const question_uid = req.params.id.trim();
-        const userId = req.userId;
-        //
         await db.beginTransaction();
+        // 1. Get data from client
+        const userId = req.userId;
+        const question_uid = req.params.id.trim();
+        const newQuestion = req.body[0];
+        let newAnswers = newQuestion.answers;
         const { name, description, tag, level } = newQuestion;
-        const queryUpdateQuestion = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}'
-        WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
 
+        // 2. Update information of this question (question table)
+        const queryUpdateQuestion = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}' WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         await db.execute(queryUpdateQuestion);
 
-        const queryGetcurrentAnswers = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}' and is_deleted = '0'`;
+        // 3. Get all answers of this question with question_uid (answer table)
+        const queryGetcurrentAnswers = `SELECT * FROM answer WHERE mc_question_uid = '${question_uid}'`;
         let [currentAnswers] = await db.execute(queryGetcurrentAnswers);
 
+        // 4. Get uid in both of new list of answers (client-sent) and current list of answers (database)
         const newUID = new Set(newAnswers.map((item) => item.uid));
         const currentUID = new Set(currentAnswers.map((item) => item.uid));
 
-        const sameInnewAnswers = newAnswers.filter((item) =>
+        // 5. Get 3 lists of uid
+        // List 1 - sameInnewAnswers: this array including the same uid of answers between client-side data and current data
+        let sameInnewAnswers = newAnswers.filter((item) =>
             currentUID.has(item.uid)
         );
 
+        // List 2 - notSameInnewAnswers: this array including the uid of answers only in client-side data
         let notSameInnewAnswers = newAnswers.filter(
             (item) => !currentUID.has(item.uid)
         );
 
+        // List 3 - notSameIncurrentAnswers: this array including the uid of answers only in current data
         let notSameIncurrentAnswers = currentAnswers.filter(
             (item) => !newUID.has(item.uid)
         );
 
+        // 6. Execute the query statements base on each list above
+        // 6.1 - notSameIncurrentAnswers: delete all answers only having current data
         if (notSameIncurrentAnswers.length > 0) {
             for (const item of notSameIncurrentAnswers) {
                 const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item.uid}' AND mc_question_uid = '${question_uid}'`;
@@ -120,6 +149,7 @@ export const handleUpdateMCQ = async (req, res) => {
             }
         }
 
+        // 6.2 - sameInnewAnswers: update all answers both having in client data and current data
         if (sameInnewAnswers.length > 0) {
             for (const item of sameInnewAnswers) {
                 const { uid, order_answer, description, correct } = item;
@@ -129,6 +159,7 @@ export const handleUpdateMCQ = async (req, res) => {
             }
         }
 
+        // 6.3 - notSameInnewAnswers: create new uid for answers only having in client data, then insert into answer table with the corresponding question_uid
         if (notSameInnewAnswers.length > 0) {
             notSameInnewAnswers = notSameInnewAnswers.map((obj) => ({
                 ...obj,
@@ -197,7 +228,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         // Get answers
         for (let i = 0; i < currentList.length; i++) {
             const mc_question_uid = currentList[i].uid;
-            const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${mc_question_uid}'AND is_deleted = '0'`;
+            const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${mc_question_uid}'`;
             const [answers] = await db.execute(queryA);
             currentList[i].answers = answers;
         }
@@ -284,7 +315,7 @@ export const handleDetailOneMCQ = async (req, res) => {
         }
 
         // Get its answers
-        const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${question_uid}'AND is_deleted = '0'`;
+        const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${question_uid}'`;
         const [resultA] = await db.execute(queryA);
 
         resultQ[0].answers = resultA;
