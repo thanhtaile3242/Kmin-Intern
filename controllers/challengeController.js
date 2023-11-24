@@ -60,11 +60,11 @@ export const handleCreateChallenge = async (req, res) => {
 // Controller for API delete a challenge
 export const handleDeleteChallenge = async (req, res) => {
     try {
-        await db.beginTransaction();
         // 1. Get data from client
         const userId = req.userId;
         const challenge_uid = req.params.id;
 
+        await db.beginTransaction();
         // 2. challenge table (soft-delete)
         const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
         await db.execute(queryDeleteC);
@@ -109,7 +109,7 @@ export const handleDeleteChallenge = async (req, res) => {
         });
     }
 };
-// Controller for API search and filter challenges (private and public)
+// Controller for API search and filter challenges (private and public) - role: Creator
 export const handleSearchChallenges = async (req, res) => {
     try {
         // 1. Get data from client
@@ -130,14 +130,7 @@ export const handleSearchChallenges = async (req, res) => {
 
         // 2. Generate the origin query statement
         let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
-        FROM challenge WHERE is_deleted = '0'`;
-        // 3. If get challenges of owner or not
-        if (owner == "1") {
-            query += ` AND creator_uid =UUID_TO_BIN('${userId}')`;
-        }
-        if (owner == "0") {
-            query += ` AND is_public = '1'`;
-        }
+        FROM challenge WHERE is_deleted = '0' AND creator_uid =UUID_TO_BIN('${userId}')`;
 
         // 4. If having filter by level of challenges
         if (level) {
@@ -240,13 +233,13 @@ export const handleUpdateChallenge = async (req, res) => {
     try {
         // 1. Get data from client
         const userId = req.userId;
-        const challenge_uid = req.params.id.trim();
+        const challenge_uid = req.params.id;
         const newChallenge = req.body[0];
         const newQuestions = newChallenge.questions;
         await db.beginTransaction();
 
         // 2. Delete all old questions in a challenge (in database)
-        const query1 = `UPDATE challenge_detail SET is_deleted = '1' WHERE challenge_uid = '${challenge_uid}'`;
+        const query1 = `DELETE FROM challenge_detail WHERE challenge_uid = '${challenge_uid}'`;
         await db.execute(query1);
 
         // 3. Insert all new questions in a challenge (client send)

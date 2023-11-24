@@ -37,17 +37,17 @@ router.post(
 );
 // API delete a challenge (soft-delete)
 router.delete(
-    "/delete/:id",
+    "/:id",
     [checkValidToken, checkChallengeExistent],
     handleDeleteChallenge
 );
-// API search and filter challenges (public and private)
-router.get("/searchCreator", [checkValidToken], handleSearchChallenges);
+// API search and filter challenges (public and private) - role: Creator
+router.get("/search", [checkValidToken], handleSearchChallenges);
 
 // API update a challenge
 router.put(
-    "/edit/:id",
-    [checkValidToken, checkEmptyData],
+    "/:id",
+    [checkValidToken, checkEmptyData, checkChallengeExistent],
     handleUpdateChallenge
 );
 // API detail a challenge and its questions

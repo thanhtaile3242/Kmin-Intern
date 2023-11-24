@@ -33,18 +33,26 @@ router.post(
 );
 // API delete a question (soft-delete)
 router.delete(
-    "/delete/:id",
+    "/:id",
     [checkValidToken, checkQuestionExistent],
     handleDeleteMCQ
 );
 // API update a question
-router.put("/edit/:id", [checkValidToken, checkEmptyData], handleUpdateMCQ);
+router.put(
+    "/:id",
+    [checkValidToken, checkEmptyData, checkQuestionExistent],
+    handleUpdateMCQ
+);
 
 // API get questions by search and filter
 router.get("/search", [checkValidToken], handleSearchAndFilterMCQ);
 
 // API display detail a question including its answers
-router.get("/:id", [checkValidToken], handleDetailOneMCQ);
+router.get(
+    "/:id",
+    [checkValidToken, checkQuestionExistent],
+    handleDetailOneMCQ
+);
 
 // Export router
 export default router;
