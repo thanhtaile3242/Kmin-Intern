@@ -52,6 +52,26 @@ export const generateQuerySearchFilterChallenge = (keyword, query) => {
         return sqlQuery;
     }
 };
+//
+export const generateQuerySearchFilterAssignment = (keyword, query) => {
+    if (keyword) {
+        const keywords = keyword.split(" ");
+        const conditionClauses = keywords
+            .map(
+                (kw) =>
+                    `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`
+            )
+            .join(" AND ");
+
+        const sqlQuery = `SELECT a.username, subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
+        return sqlQuery;
+    } else {
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid`;
+        return sqlQuery;
+    }
+};
 // Count matching score
 export const countMatching = (keyWord, Target) => {
     // Tách chuỗi thành mảng

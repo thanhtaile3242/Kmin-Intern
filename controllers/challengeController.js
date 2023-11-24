@@ -114,9 +114,9 @@ export const handleSearchChallenges = async (req, res) => {
     try {
         // 1. Get data from client
         const userId = req.userId;
+        let keyword = req.query.keyword;
         const page = req.query.page;
         const limit = req.query.limit;
-        let keyword = req.query.keyword;
         let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
             ? req.query.sortOrder
             : "";
@@ -126,7 +126,6 @@ export const handleSearchChallenges = async (req, res) => {
         let level = ["1", "2", "3"].includes(req.query.level)
             ? req.query.level
             : "";
-        let owner = ["1", "0"].includes(req.query.owner) ? req.query.owner : "";
 
         // 2. Generate the origin query statement
         let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
@@ -202,7 +201,7 @@ export const handleSearchChallenges = async (req, res) => {
             // Second step
             const combinedArray = scores.map((value, index) => ({
                 score: value,
-                question: filterList[index],
+                challenge: filterList[index],
             }));
             combinedArray.sort((a, b) => b.score - a.score);
             combinedArray.forEach((item) => {
@@ -210,7 +209,7 @@ export const handleSearchChallenges = async (req, res) => {
             });
 
             // Get the final list
-            currentList = combinedArray.map((item) => item.question);
+            currentList = combinedArray.map((item) => item.challenge);
         }
         currentList.forEach((item) => {
             delete item.full_name;
