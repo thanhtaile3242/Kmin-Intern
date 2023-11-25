@@ -13,7 +13,7 @@ export const handleCreateMCQ = async (req, res) => {
 
             const uuidQuestion = uuidv4();
 
-            const queryQuestion = `INSERT INTO question (\`uid\`,\`account_uid\`,\`question_type_id\`,\`name\`,\`description\`, \`tag\`, \`level\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${description}','${tag}', '${level}')`;
+            const queryQuestion = `INSERT INTO question (\`uid\`,\`creator_uid\`,\`question_type_id\`,\`name\`,\`description\`, \`tag\`, \`level\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${description}','${tag}', '${level}')`;
 
             await db.execute(queryQuestion);
 
@@ -51,7 +51,7 @@ export const handleDeleteMCQ = async (req, res) => {
         const question_uid = req.params.id.trim();
 
         // 2. question table (soft delete)
-        const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
+        const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         await db.execute(queryDeleteQ);
 
         // 3. answer table (delete)
@@ -107,7 +107,7 @@ export const handleUpdateMCQ = async (req, res) => {
         const { name, description, tag, level } = newQuestion;
 
         // 2. Update information of this question (question table)
-        const queryUpdateQuestion = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}' WHERE account_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
+        const queryUpdateQuestion = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}' WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         await db.execute(queryUpdateQuestion);
 
         // 3. Get all answers of this question with question_uid (answer table)
@@ -196,8 +196,8 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             ? req.query.level
             : "";
 
-        let query = `SELECT account_uid, uid, description, name, tag, level ,CONCAT(name, " ", description, " ", tag) AS full_name
-        FROM question WHERE account_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
+        let query = `SELECT creator_uid, uid, description, name, tag, level ,CONCAT(name, " ", description, " ", tag) AS full_name
+        FROM question WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
         // if having filter by level of questions
         if (level) {
             query += ` AND level = ${level}`;
@@ -298,7 +298,7 @@ export const handleDetailOneMCQ = async (req, res) => {
 
         // Get a question
         const queryQ = `SELECT a.username, q.uid, q.description, q.name, q.tag, q.level 
-        FROM question q JOIN account a ON q.account_uid = a.uid WHERE q.account_uid = UUID_TO_BIN('${userId}') AND q.uid = '${question_uid}' AND q.is_deleted = '0'`;
+        FROM question q JOIN account a ON q.creator_uid = a.uid WHERE q.creator_uid = UUID_TO_BIN('${userId}') AND q.uid = '${question_uid}' AND q.is_deleted = '0'`;
         const [resultQ] = await db.execute(queryQ);
 
         if (resultQ.length === 0) {

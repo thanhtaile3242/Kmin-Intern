@@ -24,11 +24,11 @@ export const generateQuerySearchFilter = (keyword, query) => {
             )
             .join(" AND ");
         const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level, subquery.tag FROM 
-        (${query}) AS subquery JOIN account a ON subquery.account_uid = a.uid WHERE ${conditionClauses}`;
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
         return sqlQuery;
     } else {
         const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level, subquery.tag FROM 
-        (${query}) AS subquery JOIN account a ON subquery.account_uid = a.uid `;
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid `;
         return sqlQuery;
     }
 };
