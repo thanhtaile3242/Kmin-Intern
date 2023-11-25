@@ -4,9 +4,9 @@ import db from "../models/db.js";
 export const validateUserSignUp = [
     (req, res, next) => {
         // Trim spaces from the input data
-        req.body.username = req.body.username.trim();
-        req.body.email = req.body.email.trim();
-        req.body.password = req.body.password.trim();
+        req.body.username = req.body.username?.trim();
+        req.body.email = req.body.email?.trim();
+        req.body.password = req.body.password?.trim();
         next();
     },
     // Define validation rules for each field
@@ -36,7 +36,7 @@ export const checkExistentAccount = async (req, res, next) => {
     const checkUserQuery = `SELECT * FROM account WHERE username = '${username}'`;
     try {
         const [usernameResults] = await db.execute(checkUserQuery);
-        if (usernameResults.length > 0) {
+        if (usernameResults?.length > 0) {
             return res.status(400).json({
                 status: "fail",
                 message: "Username already in use",
@@ -54,7 +54,7 @@ export const checkExistentAccount = async (req, res, next) => {
     const checkEmailQuery = `SELECT * FROM account WHERE email = '${email}'`;
     try {
         const [emailResults] = await db.execute(checkEmailQuery);
-        if (emailResults.length > 0) {
+        if (emailResults?.length > 0) {
             return res.status(400).json({
                 status: "fail",
                 message: "Email already in use",
@@ -75,10 +75,10 @@ export const checkExistentAccount = async (req, res, next) => {
 export const validateUserSignIn = async (req, res, next) => {
     const { signinName } = req.body;
     // Check if the inputString matches either email or username
-    const query = `SELECT * FROM account WHERE email = '${signinName.trim()}' OR username = '${signinName.trim()}'`;
+    const query = `SELECT * FROM account WHERE email = '${signinName?.trim()}' OR username = '${signinName?.trim()}'`;
     try {
         const [results] = await db.execute(query);
-        if (results.length === 0) {
+        if (results?.length === 0) {
             return res.status(401).json({
                 status: "fail",
                 message: "User not found",
