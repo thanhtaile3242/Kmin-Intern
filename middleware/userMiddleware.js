@@ -28,8 +28,7 @@ export const validateUserSignUp = [
         }
         next(); // No validation errors, proceed to the next middleware or route
     },
-]; // (pending)
-
+];
 export const checkExistentAccount = async (req, res, next) => {
     const { username, email } = req.body;
 
@@ -70,7 +69,7 @@ export const checkExistentAccount = async (req, res, next) => {
     }
     // If neither username nor email exists, call next() to proceed
     next();
-}; // (pending)
+};
 
 // Middleware for Sign In API
 export const validateUserSignIn = async (req, res, next) => {
@@ -94,8 +93,7 @@ export const validateUserSignIn = async (req, res, next) => {
             message: "Database error",
         });
     }
-}; // (pending)
-
+};
 export const checkSpecialCharactersInUsername = (req, res, next) => {
     const inputUsername = req.body.username;
     // Define a regular expression to match special characters
@@ -112,4 +110,4 @@ export const checkSpecialCharactersInUsername = (req, res, next) => {
 
     // No special characters found, proceed to the next middleware or route handler
     next();
-}; //(pending)
+};

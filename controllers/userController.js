@@ -5,10 +5,12 @@ import Redis from "ioredis";
 import { v5 as uuidv5 } from "uuid";
 import { v4 as uuidv4 } from "uuid";
 import { stringify as uuidStringify } from "uuid";
-import { getInsertQuery } from "../utils/structure.js";
-const redis = new Redis();
+
 // For generate a uuid key
+const redis = new Redis();
 const SECRET_UUID = "3216f1e5-3cb8-42e7-8a1b-c8595798bab6";
+
+// Controller for API sign in a new user
 export const handleSignUp = async (req, res) => {
     const { username, email, password } = req.body;
     try {
@@ -33,8 +35,8 @@ export const handleSignUp = async (req, res) => {
             message: "Internal server error: Unable to create an account",
         });
     }
-}; // pending
-
+};
+// Controller for API sign up an existent user
 export const handleSignIn = async (req, res) => {
     try {
         const { user, body } = req;
@@ -96,4 +98,3 @@ export const handleSignIn = async (req, res) => {
         });
     }
 };
-// pending

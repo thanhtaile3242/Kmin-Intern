@@ -1,12 +1,6 @@
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
-// Utils
-import {
-    removeVietnameseDiacritics,
-    generateQuerySearchFilter,
-    removeSpecialCharactersAndTrim,
-    countMatching,
-} from "../utils/utils.js";
+import * as utils from "../utils/utils.js";
 
 // Controller for API create MCQ
 export const handleCreateMCQ = async (req, res) => {
@@ -214,10 +208,10 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         }
         // if having search by keyword
         if (keyword) {
-            keyword = removeSpecialCharactersAndTrim(keyword);
-            keyword = removeVietnameseDiacritics(keyword);
+            keyword = utils.removeSpecialCharactersAndTrim(keyword);
+            keyword = utils.removeVietnameseDiacritics(keyword);
         }
-        query = generateQuerySearchFilter(keyword, query);
+        query = utils.generateQuerySearchFilter(keyword, query);
         // if having paginate
         if (limit && page) {
             const offset = (page - 1) * limit;
@@ -237,9 +231,9 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             currentList = currentList.map((obj) => {
                 return {
                     ...obj,
-                    full_name: removeVietnameseDiacritics(
-                        obj.full_name
-                    ).toLowerCase(),
+                    full_name: utils
+                        .removeVietnameseDiacritics(obj.full_name)
+                        .toLowerCase(),
                 };
             });
 
@@ -250,7 +244,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
 
             for (let item of currentList) {
                 const fullName = item.full_name;
-                const score = countMatching(keyword, fullName);
+                const score = utils.countMatching(keyword, fullName);
 
                 // If the keyword is similar to fullName, add the item to the array
                 if (score > 0) {
@@ -296,7 +290,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         });
     }
 };
-// Controller for API display one question and its answers
+// Controller for API display detail of one question and its answers
 export const handleDetailOneMCQ = async (req, res) => {
     try {
         const userId = req.userId;

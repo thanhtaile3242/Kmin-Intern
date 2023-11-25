@@ -1,13 +1,6 @@
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
-import {
-    removeVietnameseDiacritics,
-    generateQuerySearchFilterChallenge,
-    removeSpecialCharactersAndTrim,
-    countMatching,
-    arraysEqual,
-    challengeResult,
-} from "../utils/utils.js";
+import * as utils from "../utils/utils.js";
 
 // Controller for API create a challenge
 export const handleCreateChallenge = async (req, res) => {
@@ -109,124 +102,6 @@ export const handleDeleteChallenge = async (req, res) => {
         });
     }
 };
-// Controller for API search and filter challenges (private and public) - role: Creator
-export const handleSearchChallenges = async (req, res) => {
-    try {
-        // 1. Get data from client
-        const userId = req.userId;
-        let keyword = req.query.keyword;
-        const page = req.query.page;
-        const limit = req.query.limit;
-        let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
-            ? req.query.sortOrder
-            : "";
-        let sortField = ["name", "created_at"].includes(req.query.sortField)
-            ? req.query.sortField
-            : "";
-        let level = ["1", "2", "3"].includes(req.query.level)
-            ? req.query.level
-            : "";
-
-        // 2. Generate the origin query statement
-        let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
-        FROM challenge WHERE is_deleted = '0' AND creator_uid =UUID_TO_BIN('${userId}')`;
-
-        // 4. If having filter by level of challenges
-        if (level) {
-            query += ` AND level = ${level}`;
-        }
-        // 5. If having sort challenges by name or created_at
-        if (sortField && sortOrder) {
-            query += ` ORDER BY ${sortField} ${sortOrder}`;
-        }
-        // 6. If having search by keyword
-        if (keyword) {
-            keyword = keyword.toLowerCase();
-            keyword = removeSpecialCharactersAndTrim(keyword);
-            keyword = removeVietnameseDiacritics(keyword);
-        }
-        // 7. Get query statement (yet having paginate)
-        query = generateQuerySearchFilterChallenge(keyword, query);
-
-        // 8. If having paginate
-        if (limit && page) {
-            const offset = (page - 1) * limit;
-            query += ` limit ${limit} offset ${offset}`;
-        }
-        // 9. Get challenges
-        let [currentList, field] = await db.execute(query);
-        if (currentList.length == 0) {
-            return res.status(400).json({
-                status: "fail",
-                message: "Not challenges found",
-                data: [],
-            });
-        }
-        // 9.1 Get total questions of each challenge
-        for (let i = 0; i < currentList.length; i++) {
-            const challenge_uid = currentList[i].uid;
-            const queryQ = `SELECT count(question_uid) as totalQuestions FROM challenge_detail WHERE challenge_uid = '${challenge_uid}' AND is_deleted = '0' GROUP BY challenge_uid`;
-            const [questions] = await db.execute(queryQ);
-            currentList[i].totalQuestions = questions[0]?.totalQuestions
-                ? questions[0].totalQuestions
-                : 0;
-        }
-        // 10. Ranking challenges base on keyword
-        if (keyword) {
-            currentList = currentList.map((obj) => {
-                return {
-                    ...obj,
-                    full_name: removeVietnameseDiacritics(
-                        obj.full_name
-                    ).toLowerCase(),
-                };
-            });
-
-            // Filter and Ranking the order of the questions in result
-            // First step
-            let filterList = [];
-            let scores = [];
-
-            for (let item of currentList) {
-                const fullName = item.full_name;
-                const score = countMatching(keyword, fullName);
-
-                // If the keyword is similar to fullName, add the item to the array
-                if (score > 0) {
-                    scores.push(score);
-                    filterList.push(item);
-                }
-            }
-
-            // Second step
-            const combinedArray = scores.map((value, index) => ({
-                score: value,
-                challenge: filterList[index],
-            }));
-            combinedArray.sort((a, b) => b.score - a.score);
-            combinedArray.forEach((item) => {
-                delete item.score;
-            });
-
-            // Get the final list
-            currentList = combinedArray.map((item) => item.challenge);
-        }
-        currentList.forEach((item) => {
-            delete item.full_name;
-        });
-
-        return res.status(200).json({
-            status: "success",
-            data: currentList,
-        });
-    } catch (error) {
-        console.error("Error:", error);
-        return res.status(500).json({
-            status: "error",
-            message: "Internal Server Error",
-        });
-    }
-};
 // Controller for API update a challenge
 export const handleUpdateChallenge = async (req, res) => {
     try {
@@ -289,6 +164,124 @@ export const handleUpdateChallenge = async (req, res) => {
         return res.status(500).json({
             status: "error",
             message: "Error updating challenge",
+        });
+    }
+};
+// Controller for API search challenges (private and public) - role: Creator
+export const handleSearchChallenges = async (req, res) => {
+    try {
+        // 1. Get data from client
+        const userId = req.userId;
+        let keyword = req.query.keyword;
+        const page = req.query.page;
+        const limit = req.query.limit;
+        let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
+            ? req.query.sortOrder
+            : "";
+        let sortField = ["name", "created_at"].includes(req.query.sortField)
+            ? req.query.sortField
+            : "";
+        let level = ["1", "2", "3"].includes(req.query.level)
+            ? req.query.level
+            : "";
+
+        // 2. Generate the origin query statement
+        let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
+        FROM challenge WHERE is_deleted = '0' AND creator_uid =UUID_TO_BIN('${userId}')`;
+
+        // 4. If having filter by level of challenges
+        if (level) {
+            query += ` AND level = ${level}`;
+        }
+        // 5. If having sort challenges by name or created_at
+        if (sortField && sortOrder) {
+            query += ` ORDER BY ${sortField} ${sortOrder}`;
+        }
+        // 6. If having search by keyword
+        if (keyword) {
+            keyword = keyword.toLowerCase();
+            keyword = utils.removeSpecialCharactersAndTrim(keyword);
+            keyword = utils.removeVietnameseDiacritics(keyword);
+        }
+        // 7. Get query statement (yet having paginate)
+        query = utils.generateQuerySearchFilterChallenge(keyword, query);
+
+        // 8. If having paginate
+        if (limit && page) {
+            const offset = (page - 1) * limit;
+            query += ` limit ${limit} offset ${offset}`;
+        }
+        // 9. Get challenges
+        let [currentList, field] = await db.execute(query);
+        if (currentList.length == 0) {
+            return res.status(400).json({
+                status: "fail",
+                message: "Not challenges found",
+                data: [],
+            });
+        }
+        // 9.1 Get total questions of each challenge
+        for (let i = 0; i < currentList.length; i++) {
+            const challenge_uid = currentList[i].uid;
+            const queryQ = `SELECT count(question_uid) as totalQuestions FROM challenge_detail WHERE challenge_uid = '${challenge_uid}' AND is_deleted = '0' GROUP BY challenge_uid`;
+            const [questions] = await db.execute(queryQ);
+            currentList[i].totalQuestions = questions[0]?.totalQuestions
+                ? questions[0].totalQuestions
+                : 0;
+        }
+        // 10. Ranking challenges base on keyword
+        if (keyword) {
+            currentList = currentList.map((obj) => {
+                return {
+                    ...obj,
+                    full_name: utils
+                        .removeVietnameseDiacritics(obj.full_name)
+                        .toLowerCase(),
+                };
+            });
+
+            // Filter and Ranking the order of the questions in result
+            // First step
+            let filterList = [];
+            let scores = [];
+
+            for (let item of currentList) {
+                const fullName = item.full_name;
+                const score = utils.countMatching(keyword, fullName);
+
+                // If the keyword is similar to fullName, add the item to the array
+                if (score > 0) {
+                    scores.push(score);
+                    filterList.push(item);
+                }
+            }
+
+            // Second step
+            const combinedArray = scores.map((value, index) => ({
+                score: value,
+                challenge: filterList[index],
+            }));
+            combinedArray.sort((a, b) => b.score - a.score);
+            combinedArray.forEach((item) => {
+                delete item.score;
+            });
+
+            // Get the final list
+            currentList = combinedArray.map((item) => item.challenge);
+        }
+        currentList.forEach((item) => {
+            delete item.full_name;
+        });
+
+        return res.status(200).json({
+            status: "success",
+            data: currentList,
+        });
+    } catch (error) {
+        console.error("Error:", error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
         });
     }
 };
@@ -429,7 +422,7 @@ export const handleSumbitChallange = async (req, res) => {
         };
 
         // Get the result of the challenge
-        const finalResult = challengeResult(clientData, systemData);
+        const finalResult = utils.challengeResult(clientData, systemData);
 
         return res.status(200).json({
             status: "success",

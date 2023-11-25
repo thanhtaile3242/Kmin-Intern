@@ -13,7 +13,7 @@ export const removeVietnameseDiacritics = (str) => {
         })
         .join("");
 };
-// Generate SQL query for search and filter (multiple choice questions)
+// Generate SQL query for search and filter (Multiple choice questions)
 export const generateQuerySearchFilter = (keyword, query) => {
     if (keyword) {
         const keywords = keyword.split(" ");
@@ -32,7 +32,7 @@ export const generateQuerySearchFilter = (keyword, query) => {
         return sqlQuery;
     }
 };
-// Generate SQL query for search and filter (Challenge)
+// Generate SQL query for search and filter (Challenges)
 export const generateQuerySearchFilterChallenge = (keyword, query) => {
     if (keyword) {
         const keywords = keyword.split(" ");
@@ -52,7 +52,7 @@ export const generateQuerySearchFilterChallenge = (keyword, query) => {
         return sqlQuery;
     }
 };
-//
+// Generate SQL query for search and filter (Assignments)
 export const generateQuerySearchFilterAssignment = (keyword, query) => {
     if (keyword) {
         const keywords = keyword.split(" ");

@@ -1,25 +1,25 @@
 import express from "express";
-// Controller
-import { handleSignUp, handleSignIn } from "../controllers/userController.js";
-// Middleware
-import {
-    validateUserSignUp,
-    checkExistentAccount,
-    validateUserSignIn,
-    checkSpecialCharactersInUsername,
-} from "../middleware/userMiddleware.js";
 const router = express.Router();
+// Controller
+import * as userController from "../controllers/userController.js";
+// Middleware
+import * as userMiddleware from "../middleware/userMiddleware.js";
+
 // API sign up
 router.post(
     "/signup",
     [
-        validateUserSignUp,
-        checkSpecialCharactersInUsername,
-        checkExistentAccount,
+        userMiddleware.validateUserSignUp,
+        userMiddleware.checkSpecialCharactersInUsername,
+        userMiddleware.checkExistentAccount,
     ],
-    handleSignUp
+    userController.handleSignUp
 );
 // API sign in
-router.post("/signin", validateUserSignIn, handleSignIn);
+router.post(
+    "/signin",
+    [userMiddleware.validateUserSignIn],
+    userController.handleSignIn
+);
 
 export default router;
