@@ -1,5 +1,6 @@
 import db from "../models/db.js";
 import { v4 as uuidv4 } from "uuid";
+import * as utils from "../utils/utils.js";
 // Controller for API create an assignment
 export const handleCreateAssignment = async (req, res) => {
     try {
@@ -120,28 +121,39 @@ export const handleSearchAssignments = async (req, res) => {
         let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
             ? req.query.sortOrder
             : "";
-        let own = ["1", "0"].includes(req.query.own) ? req.query.own : "";
-
+        let own = ["1", "0"].includes(req.query.own) ? req.query.own : "1";
+        let is_public = ["1", "0"].includes(req.query.is_public)
+            ? req.query.is_public
+            : "";
+        //
         let query = `SELECT creator_uid, uid, description, name, is_public, CONCAT(name, " ", description) AS full_name
             FROM assignment WHERE is_deleted = '0'`;
 
         if (own == "1") {
-            query += ` AND creator_uid =UUID_TO_BIN('${userId}')`;
+            query += ` AND creator_uid = UUID_TO_BIN('${userId}')`;
         }
+        if (own == "1" && is_public == "1") {
+            query += ` AND creator_uid = UUID_TO_BIN('${userId}') AND  is_public = '1'`;
+        }
+        if (own == "1" && is_public == "0") {
+            query += ` AND creator_uid = UUID_TO_BIN('${userId}') AND  is_public = '0'`;
+        }
+
         if (own == "0") {
-            query += ` AND is_public = '1'`;
+            query += ` AND is_public = '1' AND creator_uid <> UUID_TO_BIN('${userId}')`;
         }
+
         if (sortField && sortOrder) {
             query += ` ORDER BY ${sortField} ${sortOrder}`;
         }
 
         if (keyword) {
             keyword = keyword.toLowerCase();
-            keyword = removeSpecialCharactersAndTrim(keyword);
-            keyword = removeVietnameseDiacritics(keyword);
+            keyword = utils.removeSpecialCharactersAndTrim(keyword);
+            keyword = utils.removeVietnameseDiacritics(keyword);
         }
 
-        query = generateQuerySearchFilterAssignment(keyword, query);
+        query = utils.generateQuerySearchFilterAssignment(keyword, query);
 
         if (limit && page) {
             const offset = (page - 1) * limit;
@@ -169,9 +181,9 @@ export const handleSearchAssignments = async (req, res) => {
         if (keyword) {
             currentList = currentList.map((obj) => ({
                 ...obj,
-                full_name: removeVietnameseDiacritics(
-                    obj.full_name
-                ).toLowerCase(),
+                full_name: utils
+                    .removeVietnameseDiacritics(obj.full_name)
+                    .toLowerCase(),
             }));
 
             let filterList = [];
@@ -179,7 +191,7 @@ export const handleSearchAssignments = async (req, res) => {
 
             for (let item of currentList) {
                 const fullName = item.full_name;
-                const score = countMatching(keyword, fullName);
+                const score = utils.countMatching(keyword, fullName);
 
                 if (score > 0) {
                     scores.push(score);

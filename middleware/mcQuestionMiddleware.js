@@ -34,10 +34,10 @@ export const checkQuestionExistent = async (req, res, next) => {
 export const checkLimitOfMCQ = (req, res, next) => {
     const data = req.body;
     // Check if having more than 10 questions
-    const hasMoreThanFiveObjects = data.length > 10;
+    const hasMoreThanFiveObjects = data.length > 50;
     // Check if having more than 10 answers in each question
     const hasAnswerWithMoreThanThreeObjects = data.some(
-        (item) => item.answers.length > 10
+        (item) => item.answers.length > 20
     );
 
     if (hasMoreThanFiveObjects) {

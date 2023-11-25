@@ -34,10 +34,7 @@ router.put(
 // API search and filter challenges (public and private) - role: Creator
 router.get(
     "/search",
-    [
-        commonMiddleware.authentication,
-        challengeMiddleware.checkChallengeExistent,
-    ],
+    [commonMiddleware.authentication],
     challengeController.handleSearchChallenges
 );
 // API detail a challenge and its questions

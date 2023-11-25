@@ -34,10 +34,7 @@ router.put(
 // API search assignments (Role: Creator and Solver)
 router.get(
     "/search",
-    [
-        commonMiddleware.authentication,
-        assignmentMiddleware.checkAssignmentExistent,
-    ],
+    [commonMiddleware.authentication],
     assignmentController.handleSearchAssignments
 );
 // API detail an assignment and its challenges
