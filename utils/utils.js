@@ -73,10 +73,13 @@ export const generateQuerySearchFilterAssignment = (keyword, query) => {
     }
 };
 // Count matching score
-export const countMatching = (keyWord, Target) => {
+export const countMatching = (keyword, target) => {
+    // Xử lý
+    keyword = keyword.toLowerCase();
+    target = target.toLowerCase();
     // Tách chuỗi thành mảng
-    const a = keyWord.split(" ");
-    const b = Target.split(" ");
+    const a = keyword.split(" ");
+    const b = target.split(" ");
 
     // Xử lý thuật toán trên mảng
     const lenA = a.length;
@@ -85,7 +88,7 @@ export const countMatching = (keyWord, Target) => {
     // Bắt cặp từ một phần tử ở mảng a với một phần tử ở mảng b
     for (let i = 0; i < lenA; i++) {
         for (let j = 0; j < lenB; j++) {
-            if (a[i] == b[j])
+            if (b[j].includes(a[i]))
                 // Nếu 2 phần tử giống nhau thì tăng đếm
                 count++;
         }
