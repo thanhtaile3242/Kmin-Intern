@@ -117,30 +117,30 @@ export const handleSearchAssignments = async (req, res) => {
         let keyword = req.query.keyword;
         let sortField = ["name", "created_at"].includes(req.query.sortField)
             ? req.query.sortField
-            : "";
+            : "created_at";
         let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
             ? req.query.sortOrder
-            : "";
+            : "asc";
         let own = ["1", "0"].includes(req.query.own) ? req.query.own : "1";
         let is_public = ["1", "0"].includes(req.query.is_public)
             ? req.query.is_public
-            : "";
+            : "1";
         //
         let query = `SELECT creator_uid, uid, description, name, is_public, CONCAT(name, " ", description) AS full_name
             FROM assignment WHERE is_deleted = '0'`;
-
+        //
         if (own == "1") {
             query += ` AND creator_uid = UUID_TO_BIN('${userId}')`;
         }
+        if (own == "0") {
+            query += ` AND is_public = '1' AND creator_uid <> UUID_TO_BIN('${userId}')`;
+        }
+        //
         if (own == "1" && is_public == "1") {
             query += ` AND creator_uid = UUID_TO_BIN('${userId}') AND  is_public = '1'`;
         }
         if (own == "1" && is_public == "0") {
             query += ` AND creator_uid = UUID_TO_BIN('${userId}') AND  is_public = '0'`;
-        }
-
-        if (own == "0") {
-            query += ` AND is_public = '1' AND creator_uid <> UUID_TO_BIN('${userId}')`;
         }
 
         if (sortField && sortOrder) {

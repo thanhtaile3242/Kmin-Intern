@@ -188,13 +188,13 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         let keyword = req.query.keyword;
         let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
             ? req.query.sortOrder
-            : "";
+            : "asc";
         let sortField = ["name", "created_at"].includes(req.query.sortField)
             ? req.query.sortField
-            : "";
+            : "created_at";
         let level = ["1", "2", "3"].includes(req.query.level)
             ? req.query.level
-            : "";
+            : "1";
 
         let query = `SELECT creator_uid, uid, description, name, tag, level ,CONCAT(name, " ", description, " ", tag) AS full_name
         FROM question WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
@@ -215,6 +215,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         // if having paginate
         if (limit && page) {
             const offset = (page - 1) * limit;
+
             query += ` limit ${limit} offset ${offset}`;
         }
         // Get questions

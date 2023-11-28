@@ -73,9 +73,10 @@ export const checkExistentAccount = async (req, res, next) => {
 
 // Middleware for Sign In API
 export const validateUserSignIn = async (req, res, next) => {
-    const { signinName } = req.body;
+    let { signInName } = req.body;
+    signInName = signInName?.trim();
     // Check if the inputString matches either email or username
-    const query = `SELECT * FROM account WHERE email = '${signinName?.trim()}' OR username = '${signinName?.trim()}'`;
+    const query = `SELECT * FROM account WHERE email = '${signInName}' OR username = '${signInName}'`;
     try {
         const [results] = await db.execute(query);
         if (results?.length === 0) {

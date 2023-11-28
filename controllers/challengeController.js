@@ -177,13 +177,13 @@ export const handleSearchChallenges = async (req, res) => {
         const limit = req.query.limit;
         let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
             ? req.query.sortOrder
-            : "";
+            : "asc";
         let sortField = ["name", "created_at"].includes(req.query.sortField)
             ? req.query.sortField
-            : "";
+            : "created_at";
         let level = ["1", "2", "3"].includes(req.query.level)
             ? req.query.level
-            : "";
+            : "1";
 
         // 2. Generate the origin query statement
         let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
