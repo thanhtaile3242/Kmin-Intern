@@ -4,14 +4,13 @@ import * as utils from "../utils/utils.js";
 
 // Controller for API create a challenge
 export const handleCreateChallenge = async (req, res) => {
+    // 1. Get data from client
+    const userId = req?.userId;
+    const data = req.body[0];
+    const { name, description, minute, questions, is_public } = data;
+    const challenge_uid = uuidv4();
     try {
         await db.beginTransaction();
-        // 1. Get data from client
-        const userId = req.userId;
-        const data = req.body[0];
-        const { name, description, minute, questions, is_public } = data;
-        const challenge_uid = uuidv4();
-
         // 2. challenge-detail table
         for (const question of questions) {
             const { question_uid, weight } = question;
@@ -21,7 +20,7 @@ export const handleCreateChallenge = async (req, res) => {
         // 3. Calculate the level of challenge
         const queryLevel = `SELECT AVG(q.level) as average FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' GROUP BY cd.challenge_uid;`;
         const [resultLevel] = await db.execute(queryLevel);
-        const level = Math.round(resultLevel[0].average);
+        const level = Math.round(resultLevel[0]?.average);
 
         // 4. challenge table
         const query2 = `INSERT INTO challenge (\`uid\`, \`creator_uid\`, \`name\`, \`description\`, \`minute\`, \`is_public\`, \`level\`) VALUES ('${challenge_uid}', UUID_TO_BIN('${userId}'), '${name}', '${description}', '${minute}', '${is_public}', '${level}')`;
@@ -46,24 +45,23 @@ export const handleCreateChallenge = async (req, res) => {
         console.error("Error creating challenge:", error);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error: Unable to create challenge",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };
 // Controller for API delete a challenge
 export const handleDeleteChallenge = async (req, res) => {
+    // 1. Get data from client
+    const userId = req?.userId;
+    const challenge_uid = req.params?.id;
     try {
-        // 1. Get data from client
-        const userId = req.userId;
-        const challenge_uid = req.params.id;
-
         await db.beginTransaction();
         // 2. challenge table (soft-delete)
-        const queryDeleteC = `UPDATE challenge SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
+        const queryDeleteC = `UPDATE challenge SET is_deleted = '1' WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${challenge_uid}'`;
         await db.execute(queryDeleteC);
 
         // 3. challenge_detail table (soft-delete)
-        const queryDeleteCD = `UPDATE challenge_detail SET is_deleted = 1 WHERE challenge_uid = '${challenge_uid}'`;
+        const queryDeleteCD = `UPDATE challenge_detail SET is_deleted = '1' WHERE challenge_uid = '${challenge_uid}'`;
         await db.execute(queryDeleteCD);
 
         // 4. assignment table
@@ -98,20 +96,19 @@ export const handleDeleteChallenge = async (req, res) => {
         console.error("Error deleting challenge:", error);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error: Unable to delete challenge.",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };
 // Controller for API update a challenge
 export const handleUpdateChallenge = async (req, res) => {
+    // 1. Get data from client
+    const userId = req?.userId;
+    const challenge_uid = req.params?.id;
+    const newChallenge = req.body[0];
+    const newQuestions = newChallenge?.questions;
     try {
-        // 1. Get data from client
-        const userId = req.userId;
-        const challenge_uid = req.params.id;
-        const newChallenge = req.body[0];
-        const newQuestions = newChallenge.questions;
         await db.beginTransaction();
-
         // 2. Delete all old questions in a challenge (in database)
         const query1 = `DELETE FROM challenge_detail WHERE challenge_uid = '${challenge_uid}'`;
         await db.execute(query1);
@@ -154,6 +151,7 @@ export const handleUpdateChallenge = async (req, res) => {
         }
 
         await db.commit();
+        // Return for client-side
         return res.status(200).json({
             status: "success",
             message: "Challenge updated successfully",
@@ -163,28 +161,27 @@ export const handleUpdateChallenge = async (req, res) => {
         console.error("Error updating challenge:", error);
         return res.status(500).json({
             status: "error",
-            message: "Error updating challenge",
+            message: `Internal server error: ${error.message}`,
         });
     }
 };
 // Controller for API search challenges (private and public) - role: Creator
 export const handleSearchChallenges = async (req, res) => {
+    // 1. Get data from client
+    const userId = req?.userId;
+    const page = req.query?.page;
+    const limit = req.query?.limit;
+    let keyword = req.query?.keyword;
+    let sortOrder = ["asc", "desc"].includes(req.query?.sortOrder)
+        ? req.query?.sortOrder
+        : "asc";
+    let sortField = ["name", "created_at"].includes(req.query?.sortField)
+        ? req.query?.sortField
+        : "created_at";
+    let level = ["1", "2", "3"].includes(req.query?.level)
+        ? req.query?.level
+        : "1";
     try {
-        // 1. Get data from client
-        const userId = req.userId;
-        let keyword = req.query.keyword;
-        const page = req.query.page;
-        const limit = req.query.limit;
-        let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
-            ? req.query.sortOrder
-            : "asc";
-        let sortField = ["name", "created_at"].includes(req.query.sortField)
-            ? req.query.sortField
-            : "created_at";
-        let level = ["1", "2", "3"].includes(req.query.level)
-            ? req.query.level
-            : "1";
-
         // 2. Generate the origin query statement
         let query = `SELECT creator_uid, uid, description, name , level, is_public,CONCAT( name, " ", description) AS full_name
         FROM challenge WHERE is_deleted = '0' AND creator_uid =UUID_TO_BIN('${userId}')`;
@@ -213,7 +210,7 @@ export const handleSearchChallenges = async (req, res) => {
         }
         // 9. Get challenges
         let [currentList, field] = await db.execute(query);
-        if (currentList.length == 0) {
+        if (currentList?.length == 0) {
             return res.status(400).json({
                 status: "fail",
                 message: "Not challenges found",
@@ -282,21 +279,20 @@ export const handleSearchChallenges = async (req, res) => {
         console.error("Error:", error);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };
 // Controller for API detail one challenge and its questions
 export const handleDetailOneChallenge = async (req, res) => {
+    const userId = req?.userId;
+    const challenge_uid = req.params?.id;
     try {
-        const userId = req.userId;
-        const challenge_uid = req.params.id;
         // Get a challenge
-        const queryC = `SELECT c.uid, c.description, c.name, a.username
-            FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.uid = '${challenge_uid}' AND is_deleted = '0'`;
+        const queryC = `SELECT c.uid, c.description, c.name, a.username FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
-        if (resultC.length === 0) {
+        if (resultC?.length === 0) {
             return res.status(404).json({
                 status: "fail",
                 message: "Challenge not found",
@@ -306,7 +302,7 @@ export const handleDetailOneChallenge = async (req, res) => {
         const queryTQ = `SELECT count(q.uid) as totalQuestions FROM challenge_detail cd JOIN question q ON cd.question_uid = q.uid WHERE cd.challenge_uid = '${challenge_uid}' GROUP BY cd.challenge_uid`;
         const [resultTQ] = await db.execute(queryTQ);
         resultC[0].totalQuestions = resultTQ[0]?.totalQuestions
-            ? resultTQ[0].totalQuestions
+            ? resultTQ[0]?.totalQuestions
             : 0;
 
         // Get questions
@@ -331,21 +327,20 @@ export const handleDetailOneChallenge = async (req, res) => {
         console.error("Error:", err);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };
 // Controller for API introduce one challenge and its questions (maximum display 3 questions)
 export const handleIntroduceOneChallene = async (req, res) => {
+    const userId = req?.userId;
+    const challenge_uid = req.params?.id;
     try {
-        const challenge_uid = req.params.id;
-        const userId = req.userId;
-
         const queryC = `SELECT c.uid, c.description, c.name, a.username
             FROM challenge c JOIN account a ON a.uid = c.creator_uid WHERE c.uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
-        if (resultC.length === 0) {
+        if (resultC?.length === 0) {
             return res.status(404).json({
                 status: "fail",
                 message: "Challenge not found",
@@ -371,26 +366,24 @@ export const handleIntroduceOneChallene = async (req, res) => {
         });
     } catch (error) {
         console.error("Error:", error);
-
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };
 // Controller for API get result when submit a challenge
 export const handleSumbitChallange = async (req, res) => {
+    // Get data
+    const userId = req.userId;
+    const clientData = req.body[0];
+    const challenge_uid = req.body[0].challenge_uid;
     try {
-        // Get data
-        const userId = req.userId;
-        const clientData = req.body[0];
-        const challenge_uid = req.body[0].challenge_uid;
-
         // Get a challenge
         const queryC = `SELECT uid, description FROM challenge WHERE uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
 
-        if (resultC.length === 0) {
+        if (resultC?.length === 0) {
             return res.status(404).json({
                 status: "fail",
                 message: "Challenge not found",
@@ -405,22 +398,22 @@ export const handleSumbitChallange = async (req, res) => {
         // Get correct answers (correct = 1)
         for (let i = 0; i < resultQ.length; i++) {
             const mc_question_uid = resultC[0].questions[i].uid;
-            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}' AND is_deleted = '0' AND correct = '1'`;
+            const queryA = `SELECT uid, description, correct FROM answer WHERE mc_question_uid = '${mc_question_uid}' AND correct = '1'`;
             const [resultA] = await db.execute(queryA);
             resultC[0].questions[i].answers = resultA;
         }
 
         // System Correct
-        const listQuestions = resultC[0].questions;
-        const systemCorrect = listQuestions.map((question) => ({
-            question_uid: question.uid,
-            correctAnswers: question.answers.map((answer) => answer.uid),
+        const listQuestions = resultC[0]?.questions;
+        const systemCorrect = listQuestions?.map((question) => ({
+            question_uid: question?.uid,
+            correctAnswers: question?.answers?.map((answer) => answer?.uid),
         }));
 
         // Create System Data
         const systemData = {
-            challenge_uid: resultC[0].uid,
-            challenge_description: resultC[0].description,
+            challenge_uid: resultC[0]?.uid,
+            challenge_description: resultC[0]?.description,
             systemAnswers: systemCorrect,
         };
 
@@ -436,7 +429,7 @@ export const handleSumbitChallange = async (req, res) => {
         console.error("Error:", err);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };

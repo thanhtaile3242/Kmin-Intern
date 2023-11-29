@@ -38,7 +38,7 @@ export const validateUserSignUp = [
             console.error(usernameError);
             return res.status(500).json({
                 status: "error",
-                message: "Internal error server",
+                message: `Internal error server: ${usernameError.message}`,
             });
         }
 
@@ -56,7 +56,7 @@ export const validateUserSignUp = [
             console.error(emailError);
             return res.status(500).json({
                 status: "error",
-                message: "Internal error server",
+                message: `Internal error server: ${emailError.message}`,
             });
         }
         // If neither username nor email exists, call next() to proceed
@@ -103,7 +103,7 @@ export const validateUserSignIn = async (req, res, next) => {
     } catch (error) {
         return res.status(500).json({
             status: "error",
-            message: "Database error",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };

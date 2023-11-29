@@ -4,31 +4,29 @@ import * as utils from "../utils/utils.js";
 
 // Controller for API create MCQ
 export const handleCreateMCQ = async (req, res) => {
+    const userID = req?.userId;
+    const listQuestion = req.body;
     try {
-        const userID = req.userId;
-        const listQuestion = req.body;
         await db.beginTransaction();
         for (const question of listQuestion) {
             const { name, description, tag, level } = question;
-
+            // Create each uid for each question
             const uuidQuestion = uuidv4();
-
+            // Insert into question table for each question
             const queryQuestion = `INSERT INTO question (\`uid\`,\`creator_uid\`,\`question_type_id\`,\`name\`,\`description\`, \`tag\`, \`level\`) VALUES ('${uuidQuestion}', UUID_TO_BIN('${userID}'),'1','${name}','${description}','${tag}', '${level}')`;
-
             await db.execute(queryQuestion);
 
             for (const answer of question.answers) {
                 const { order_answer, description, correct } = answer;
+                // Create each uid for each answer
                 const uuidAnswer = uuidv4();
-
-                const queryAnswer = `INSERT INTO answer (\`uid\`,\`mc_question_uid\`,\`order_answer\`,\`description\`,\`correct\`) 
-                VALUES ('${uuidAnswer}', '${uuidQuestion}','${order_answer}','${description}','${correct}')`;
-
+                // Insert into answer table for each answer
+                const queryAnswer = `INSERT INTO answer (\`uid\`,\`mc_question_uid\`,\`order_answer\`,\`description\`,\`correct\`) VALUES ('${uuidAnswer}', '${uuidQuestion}','${order_answer}','${description}','${correct}')`;
                 await db.execute(queryAnswer);
             }
         }
-
         await db.commit();
+        // Return for client-side
         return res.status(201).json({
             status: "success",
             message: "Questions created successfully",
@@ -38,23 +36,22 @@ export const handleCreateMCQ = async (req, res) => {
         console.error(error);
         return res.status(500).json({
             status: "error",
-            message: "Internal server error: Unable to create questions",
+            message: `Internal server error: ${error.message}`,
         });
     }
 };
 // Controller for API delete MCQ (soft-delete)
 export const handleDeleteMCQ = async (req, res) => {
+    // 1. Get data from client
+    const userId = req?.userId;
+    const question_uid = req.params?.id?.trim();
     try {
         await db.beginTransaction();
-        // 1. Get data from client
-        const userId = req.userId;
-        const question_uid = req.params.id.trim();
-
-        // 2. question table (soft delete)
-        const queryDeleteQ = `UPDATE question SET is_deleted = 1 WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
+        // 2. Update for question table (soft delete)
+        const queryDeleteQ = `UPDATE question SET is_deleted = '1' WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         await db.execute(queryDeleteQ);
 
-        // 3. answer table (delete)
+        // 3. Delete all answers of this questin in answer table (delete)
         const queryDeleteA = `DELETE FROM answer WHERE mc_question_uid = '${question_uid}'`;
         await db.execute(queryDeleteA);
 
@@ -84,28 +81,27 @@ export const handleDeleteMCQ = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
-            message: "Question soft-deleted successfully.",
+            message: "Question soft-deleted successfully",
         });
     } catch (error) {
         await db.rollback();
         console.error(error);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error: Unable to delete question",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };
 // Controller for API update MCQ
 export const handleUpdateMCQ = async (req, res) => {
+    // 1. Get data from client
+    const userId = req?.userId;
+    const question_uid = req.params?.id?.trim();
+    const newQuestion = req.body[0];
+    let newAnswers = newQuestion?.answers;
+    const { name, description, tag, level } = newQuestion;
     try {
         await db.beginTransaction();
-        // 1. Get data from client
-        const userId = req.userId;
-        const question_uid = req.params.id.trim();
-        const newQuestion = req.body[0];
-        let newAnswers = newQuestion.answers;
-        const { name, description, tag, level } = newQuestion;
-
         // 2. Update information of this question (question table)
         const queryUpdateQuestion = `UPDATE question SET name = '${name}', description = '${description}', tag = '${tag}', level = '${level}' WHERE creator_uid = UUID_TO_BIN('${userId}') AND uid = '${question_uid}'`;
         await db.execute(queryUpdateQuestion);
@@ -115,36 +111,36 @@ export const handleUpdateMCQ = async (req, res) => {
         let [currentAnswers] = await db.execute(queryGetcurrentAnswers);
 
         // 4. Get uid in both of new list of answers (client-sent) and current list of answers (database)
-        const newUID = new Set(newAnswers.map((item) => item.uid));
-        const currentUID = new Set(currentAnswers.map((item) => item.uid));
+        const newUID = new Set(newAnswers.map((item) => item?.uid));
+        const currentUID = new Set(currentAnswers.map((item) => item?.uid));
 
         // 5. Get 3 lists of uid
         // List 1 - sameInnewAnswers: this array including the same uid of answers between client-side data and current data
         let sameInnewAnswers = newAnswers.filter((item) =>
-            currentUID.has(item.uid)
+            currentUID.has(item?.uid)
         );
 
         // List 2 - notSameInnewAnswers: this array including the uid of answers only in client-side data
         let notSameInnewAnswers = newAnswers.filter(
-            (item) => !currentUID.has(item.uid)
+            (item) => !currentUID.has(item?.uid)
         );
 
         // List 3 - notSameIncurrentAnswers: this array including the uid of answers only in current data
         let notSameIncurrentAnswers = currentAnswers.filter(
-            (item) => !newUID.has(item.uid)
+            (item) => !newUID.has(item?.uid)
         );
 
         // 6. Execute the query statements base on each list above
         // 6.1 - notSameIncurrentAnswers: delete all answers only having current data
-        if (notSameIncurrentAnswers.length > 0) {
+        if (notSameIncurrentAnswers?.length > 0) {
             for (const item of notSameIncurrentAnswers) {
-                const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item.uid}' AND mc_question_uid = '${question_uid}'`;
+                const queryDeleteAnswer = `DELETE FROM answer WHERE uid = '${item?.uid}' AND mc_question_uid = '${question_uid}'`;
                 await db.execute(queryDeleteAnswer);
             }
         }
 
         // 6.2 - sameInnewAnswers: update all answers both having in client data and current data
-        if (sameInnewAnswers.length > 0) {
+        if (sameInnewAnswers?.length > 0) {
             for (const item of sameInnewAnswers) {
                 const { uid, order_answer, description, correct } = item;
                 const queryUpdateAnswer = `UPDATE answer SET order_answer = '${order_answer}', description = '${description}', correct = '${correct}'
@@ -154,7 +150,7 @@ export const handleUpdateMCQ = async (req, res) => {
         }
 
         // 6.3 - notSameInnewAnswers: create new uid for answers only having in client data, then insert into answer table with the corresponding question_uid
-        if (notSameInnewAnswers.length > 0) {
+        if (notSameInnewAnswers?.length > 0) {
             notSameInnewAnswers = notSameInnewAnswers.map((obj) => ({
                 ...obj,
                 uid: uuidv4(),
@@ -174,28 +170,30 @@ export const handleUpdateMCQ = async (req, res) => {
     } catch (error) {
         await db.rollback();
         console.error(error);
-        return res
-            .status(500)
-            .json({ status: "error", message: "Internal server error" });
+        return res.status(500).json({
+            status: "error",
+            message: `Internal server error: ${error.message}`,
+        });
     }
 };
 // Controller for API search and filter MC questions
 export const handleSearchAndFilterMCQ = async (req, res) => {
-    try {
-        const userId = req.userId;
-        const page = req.query.page;
-        const limit = req.query.limit;
-        let keyword = req.query.keyword;
-        let sortOrder = ["asc", "desc"].includes(req.query.sortOrder)
-            ? req.query.sortOrder
-            : "asc";
-        let sortField = ["name", "created_at"].includes(req.query.sortField)
-            ? req.query.sortField
-            : "created_at";
-        let level = ["1", "2", "3"].includes(req.query.level)
-            ? req.query.level
-            : "1";
+    // 1.
+    const userId = req?.userId;
+    const page = req.query?.page;
+    const limit = req.query?.limit;
+    let keyword = req.query?.keyword;
+    let sortOrder = ["asc", "desc"].includes(req.query?.sortOrder)
+        ? req.query?.sortOrder
+        : "asc";
+    let sortField = ["name", "created_at"].includes(req.query?.sortField)
+        ? req.query?.sortField
+        : "created_at";
+    let level = ["1", "2", "3"].includes(req.query?.level)
+        ? req.query?.level
+        : "1";
 
+    try {
         let query = `SELECT creator_uid, uid, description, name, tag, level ,CONCAT(name, " ", description, " ", tag) AS full_name
         FROM question WHERE creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
         // if having filter by level of questions
@@ -219,7 +217,14 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             query += ` limit ${limit} offset ${offset}`;
         }
         // Get questions
-        let [currentList, field] = await db.execute(query);
+        let [currentList] = await db.execute(query);
+        if (currentList?.length == 0) {
+            return res.status(400).json({
+                status: "fail",
+                message: "Not questions found",
+                data: [],
+            });
+        }
         // Get answers
         for (let i = 0; i < currentList.length; i++) {
             const mc_question_uid = currentList[i].uid;
@@ -233,7 +238,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
                 return {
                     ...obj,
                     full_name: utils
-                        .removeVietnameseDiacritics(obj.full_name)
+                        .removeVietnameseDiacritics(obj?.full_name)
                         .toLowerCase(),
                 };
             });
@@ -244,7 +249,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             let scores = [];
 
             for (let item of currentList) {
-                const fullName = item.full_name;
+                const fullName = item?.full_name;
                 const score = utils.countMatching(keyword, fullName);
 
                 // If the keyword is similar to fullName, add the item to the array
@@ -269,16 +274,10 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
             currentList = combinedArray.map((item) => item.question);
         }
         currentList.forEach((item) => {
-            delete item.full_name;
+            delete item?.full_name;
         });
-        if (currentList.length == 0) {
-            return res.status(400).json({
-                status: "fail",
-                message: "Not questions found",
-                data: [],
-            });
-        }
-        //
+
+        // Return for client-side
         return res.status(200).json({
             status: "success",
             message: "Get questions successfully",
@@ -288,42 +287,43 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         console.error("Error:", error);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error",
+            message: `Internal Server Error" ${error.message}`,
         });
     }
 };
 // Controller for API display detail of one question and its answers
 export const handleDetailOneMCQ = async (req, res) => {
+    // 1. Get data from client-side
+    const userId = req?.userId;
+    const question_uid = req.params?.id;
     try {
-        const userId = req.userId;
-        const question_uid = req.params.id;
-
-        // Get a question
+        // 2. Get a question
         const queryQ = `SELECT a.username, q.uid, q.description, q.name, q.tag, q.level 
         FROM question q JOIN account a ON q.creator_uid = a.uid WHERE q.creator_uid = UUID_TO_BIN('${userId}') AND q.uid = '${question_uid}' AND q.is_deleted = '0'`;
         const [resultQ] = await db.execute(queryQ);
 
-        if (resultQ.length === 0) {
+        if (resultQ?.length === 0) {
             return res.status(404).json({
                 status: "fail",
                 message: "Question not found",
             });
         }
 
-        // Get its answers
+        // 3. Get its answers
         const queryA = `SELECT uid, description FROM answer WHERE mc_question_uid = '${question_uid}'`;
         const [resultA] = await db.execute(queryA);
-
         resultQ[0].answers = resultA;
+        // 4. Return for client-side
         return res.status(200).json({
             status: "success",
+            message: "Detail a question",
             data: resultQ,
         });
     } catch (err) {
         console.error("Error:", err);
         return res.status(500).json({
             status: "error",
-            message: "Internal Server Error",
+            message: `Internal Server Error: ${error.message}`,
         });
     }
 };

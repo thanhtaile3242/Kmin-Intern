@@ -5,7 +5,7 @@ import db from "../models/db.js";
 export const authentication = async (req, res, next) => {
     try {
         // Get the 'Authorization' key from header
-        const bearerToken = req.headers.authorization;
+        const bearerToken = req.headers?.authorization;
         // Check the received token
         if (!bearerToken) {
             return res.status(401).json({
@@ -15,7 +15,7 @@ export const authentication = async (req, res, next) => {
         }
 
         const tokenParts = bearerToken.split(" ");
-        if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
+        if (tokenParts?.length !== 2 || tokenParts[0] !== "Bearer") {
             return res.status(401).json({
                 status: "fail",
                 message: "Invalid token format",
@@ -29,21 +29,14 @@ export const authentication = async (req, res, next) => {
             "LTT-secret-key-access"
         );
         // Attach userId to req object
-        req.userId = decodedData.userId;
+        req.userId = decodedData?.userId;
         next();
     } catch (error) {
-        if (error.name === "TokenExpiredError") {
-            return res.status(401).json({
-                status: "fail",
-                message: "Invalid token format",
-            });
-        } else {
-            console.error(error);
-            return res.status(500).json({
-                status: "error",
-                message: "Internal Server Error",
-            });
-        }
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: `Internal Server Error: ${error.message}`,
+        });
     }
 };
 // Middleware for checking empty fields in client-sent data
