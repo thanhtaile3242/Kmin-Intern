@@ -281,6 +281,7 @@ export const handleSearchAndFilterMCQ = async (req, res) => {
         //
         return res.status(200).json({
             status: "success",
+            message: "Get questions successfully",
             data: currentList,
         });
     } catch (error) {

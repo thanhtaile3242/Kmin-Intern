@@ -275,6 +275,7 @@ export const handleSearchChallenges = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
+            message: "Get challenges successfully",
             data: currentList,
         });
     } catch (error) {
@@ -323,6 +324,7 @@ export const handleDetailOneChallenge = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
+            message: "Detail a challenge",
             data: resultC[0],
         });
     } catch (err) {
@@ -364,6 +366,7 @@ export const handleIntroduceOneChallene = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
+            message: "introduce a challenge",
             data: resultC[0],
         });
     } catch (error) {
@@ -426,6 +429,7 @@ export const handleSumbitChallange = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
+            message: "result of a challenge",
             data: finalResult,
         });
     } catch (err) {

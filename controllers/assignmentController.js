@@ -218,6 +218,7 @@ export const handleSearchAssignments = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
+            message: "get assignments successfully",
             data: currentList,
         });
     } catch (error) {
@@ -256,6 +257,7 @@ export const handleDetailAssignment = async (req, res) => {
 
         return res.status(200).json({
             status: "success",
+            message: "detail  an assignment",
             data: resultA[0],
         });
     } catch (err) {
