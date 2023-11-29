@@ -12,11 +12,7 @@ import * as userMiddleware from "../middleware/userMiddleware.js";
 // API sign up
 router.post(
     "/signup",
-    [
-        userMiddleware.validateUserSignUp,
-        userMiddleware.checkSpecialCharactersInUsername,
-        userMiddleware.checkExistentAccount,
-    ],
+    [userMiddleware.validateUserSignUp],
     userController.handleSignUp
 );
 // API sign in

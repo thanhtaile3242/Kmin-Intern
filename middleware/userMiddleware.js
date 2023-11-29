@@ -4,9 +4,62 @@ import db from "../models/db.js";
 export const validateUserSignUp = [
     (req, res, next) => {
         // Trim spaces from the input data
-        req.body.username = req.body.username?.trim();
-        req.body.email = req.body.email?.trim();
-        req.body.password = req.body.password?.trim();
+        req.body.username = req.body?.username?.trim();
+        req.body.email = req.body?.email?.trim();
+        req.body.password = req.body?.password?.trim();
+        next();
+    },
+    async (req, res, next) => {
+        const { username, email } = req.body;
+
+        // Define a regular expression to match special characters
+        const specialCharRegex = /[.,\/?\\$£@#!%^&*;:{}=\-_`~()]/g;
+
+        // Check if the input string contains any special characters
+        if (specialCharRegex.test(username)) {
+            // Special characters found, alert or handle as needed
+            return res.status(400).json({
+                status: "fail",
+                message: "Special characters not allowed in Username",
+            });
+        }
+
+        // Check username
+        const checkUserQuery = `SELECT * FROM account WHERE username = '${username}'`;
+        try {
+            const [usernameResults] = await db.execute(checkUserQuery);
+            if (usernameResults?.length > 0) {
+                return res.status(400).json({
+                    status: "fail",
+                    message: "Username already in use",
+                });
+            }
+        } catch (usernameError) {
+            console.error(usernameError);
+            return res.status(500).json({
+                status: "error",
+                message: "Internal error server",
+            });
+        }
+
+        // Check email
+        const checkEmailQuery = `SELECT * FROM account WHERE email = '${email}'`;
+        try {
+            const [emailResults] = await db.execute(checkEmailQuery);
+            if (emailResults?.length > 0) {
+                return res.status(400).json({
+                    status: "fail",
+                    message: "Email already in use",
+                });
+            }
+        } catch (emailError) {
+            console.error(emailError);
+            return res.status(500).json({
+                status: "error",
+                message: "Internal error server",
+            });
+        }
+        // If neither username nor email exists, call next() to proceed
         next();
     },
     // Define validation rules for each field
@@ -29,47 +82,6 @@ export const validateUserSignUp = [
         next(); // No validation errors, proceed to the next middleware or route
     },
 ];
-export const checkExistentAccount = async (req, res, next) => {
-    const { username, email } = req.body;
-
-    // Check username
-    const checkUserQuery = `SELECT * FROM account WHERE username = '${username}'`;
-    try {
-        const [usernameResults] = await db.execute(checkUserQuery);
-        if (usernameResults?.length > 0) {
-            return res.status(400).json({
-                status: "fail",
-                message: "Username already in use",
-            });
-        }
-    } catch (usernameError) {
-        console.error(usernameError);
-        return res.status(500).json({
-            status: "error",
-            message: "Internal error server",
-        });
-    }
-
-    // Check email
-    const checkEmailQuery = `SELECT * FROM account WHERE email = '${email}'`;
-    try {
-        const [emailResults] = await db.execute(checkEmailQuery);
-        if (emailResults?.length > 0) {
-            return res.status(400).json({
-                status: "fail",
-                message: "Email already in use",
-            });
-        }
-    } catch (emailError) {
-        console.error(emailError);
-        return res.status(500).json({
-            status: "error",
-            message: "Internal error server",
-        });
-    }
-    // If neither username nor email exists, call next() to proceed
-    next();
-};
 
 // Middleware for Sign In API
 export const validateUserSignIn = async (req, res, next) => {
@@ -94,21 +106,4 @@ export const validateUserSignIn = async (req, res, next) => {
             message: "Database error",
         });
     }
-};
-export const checkSpecialCharactersInUsername = (req, res, next) => {
-    const inputUsername = req.body.username;
-    // Define a regular expression to match special characters
-    const specialCharRegex = /[.,\/?\\$£@#!%^&*;:{}=\-_`~()]/g;
-
-    // Check if the input string contains any special characters
-    if (specialCharRegex.test(inputUsername)) {
-        // Special characters found, alert or handle as needed
-        return res.status(400).json({
-            status: "fail",
-            message: "Special characters not allowed in Username",
-        });
-    }
-
-    // No special characters found, proceed to the next middleware or route handler
-    next();
 };

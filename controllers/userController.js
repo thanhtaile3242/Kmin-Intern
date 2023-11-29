@@ -71,15 +71,20 @@ export const handleSignIn = async (req, res) => {
         const isMatch = await bcrypt.compare(body.password, user.password);
         if (isMatch) {
             await redis.del(attemptsKey);
+            // Get user's uid and generate access_token
             const parseUUID = uuidStringify(user.uid);
-            const token = jwt.sign({ userId: parseUUID }, "LTT-secret-key");
+            const access_token = jwt.sign(
+                { userId: parseUUID },
+                "LTT-secret-key-access"
+            );
             return res.status(200).json({
                 status: "success",
                 message: "Sign in successfully",
                 data: {
+                    userId: parseUUID,
                     username: user.username,
                     email: user.email,
-                    token: token,
+                    access_token: access_token,
                 },
             });
         } else {
