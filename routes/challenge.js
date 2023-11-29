@@ -1,60 +1,69 @@
 import express from "express";
-import db from "../models/db.js";
-import { v4 as uuidv4 } from "uuid";
-// Utils
-import {
-    removeVietnameseDiacritics,
-    generateQuerySearchFilterChallenge,
-    removeSpecialCharactersAndTrim,
-    countMatching,
-    arraysEqual,
-    challengeResult,
-} from "../utils/utils.js";
-// Middleware
-import {
-    checkValidToken,
-    checkEmptyData,
-} from "../middleware/mcQuestionMiddleware.js";
-import { checkChallengeExistent } from "../middleware/challengeMiddleware.js";
-// Controllers
-import {
-    handleCreateChallenge,
-    handleDeleteChallenge,
-    handleSearchAndFilterChallenge,
-    handleUpdateChallenge,
-    handleDetailOneChallenge,
-    handleIntroduceOneChallene,
-    handleSumbitChallange,
-} from "../controllers/challengeController.js";
 const router = express.Router();
+// Middleware
+import * as commonMiddleware from "../middleware/commonMiddleware.js";
+import * as challengeMiddleware from "../middleware/challengeMiddleware.js";
+// Controllers
+import * as challengeController from "../controllers/challengeController.js";
 
 // API create a challenge
 router.post(
     "/create",
-    [checkValidToken, checkEmptyData],
-    handleCreateChallenge
+    [commonMiddleware.authentication, commonMiddleware.checkEmptyData],
+    challengeController.handleCreateChallenge
 );
 // API delete a challenge (soft-delete)
 router.delete(
-    "/delete/:id",
-    [checkValidToken, checkChallengeExistent],
-    handleDeleteChallenge
+    "/:id",
+    [
+        commonMiddleware.authentication,
+        challengeMiddleware.checkChallengeExistent,
+    ],
+    challengeController.handleDeleteChallenge
 );
-// API search and filter challenges
-router.get("/search", [checkValidToken], handleSearchAndFilterChallenge);
 // API update a challenge
 router.put(
-    "/edit/:id",
-    [checkValidToken, checkEmptyData],
-    handleUpdateChallenge
+    "/:id",
+    [
+        commonMiddleware.authentication,
+        commonMiddleware.checkEmptyData,
+        challengeMiddleware.checkChallengeExistent,
+    ],
+    challengeController.handleUpdateChallenge
+);
+// API search and filter challenges (public and private) - role: Creator
+router.get(
+    "/search",
+    [commonMiddleware.authentication],
+    challengeController.handleSearchChallenges
 );
 // API detail a challenge and its questions
-router.get("/:id", [checkValidToken], handleDetailOneChallenge);
-
+router.get(
+    "/:id",
+    [
+        commonMiddleware.authentication,
+        challengeMiddleware.checkChallengeExistent,
+    ],
+    challengeController.handleDetailOneChallenge
+);
 // API introduce a challenge (display maximum 3 questions)
-router.get("/introduce/:id", [checkValidToken], handleIntroduceOneChallene);
-
+router.get(
+    "/introduce/:id",
+    [
+        commonMiddleware.authentication,
+        challengeMiddleware.checkChallengeExistent,
+    ],
+    challengeController.handleIntroduceOneChallene
+);
 // API get result of a challenge
-router.post("/submit", [checkValidToken], handleSumbitChallange);
+router.post(
+    "/submit",
+    [
+        commonMiddleware.authentication,
+        commonMiddleware.checkEmptyData,
+        challengeMiddleware.checkChallengeExistent,
+    ],
+    challengeController.handleSumbitChallange
+);
 
 export default router;

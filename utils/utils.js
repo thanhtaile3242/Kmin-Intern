@@ -13,35 +13,73 @@ export const removeVietnameseDiacritics = (str) => {
         })
         .join("");
 };
-// Generate SQL query for search and filter (MCQ)
+// Generate SQL query for search and filter (Multiple choice questions)
 export const generateQuerySearchFilter = (keyword, query) => {
-    const keywords = keyword.split(" ");
-
-    const conditionClauses = keywords
-        .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
-        .join(" AND ");
-    let sqlQuery = `SELECT uid, description, name, full_name, level, tag FROM (${query}) AS subquery
-    WHERE ${conditionClauses}`;
-
-    return sqlQuery;
+    if (keyword) {
+        const keywords = keyword.split(" ");
+        const conditionClauses = keywords
+            .map(
+                (kw) =>
+                    `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`
+            )
+            .join(" AND ");
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level, subquery.tag FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
+        return sqlQuery;
+    } else {
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.description, subquery.name, subquery.full_name, subquery.level, subquery.tag FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid `;
+        return sqlQuery;
+    }
 };
-// Generate SQL query for search and filter (Challenge)
+// Generate SQL query for search and filter (Challenges)
 export const generateQuerySearchFilterChallenge = (keyword, query) => {
-    const keywords = keyword.split(" ");
+    if (keyword) {
+        const keywords = keyword.split(" ");
+        const conditionClauses = keywords
+            .map(
+                (kw) =>
+                    `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`
+            )
+            .join(" AND ");
 
-    const conditionClauses = keywords
-        .map((kw) => `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`)
-        .join(" AND ");
-    let sqlQuery = `SELECT uid, description, name, full_name FROM (${query}) AS subquery
-    WHERE ${conditionClauses}`;
+        const sqlQuery = `SELECT a.username, subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
+        return sqlQuery;
+    } else {
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name, subquery.level FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid`;
+        return sqlQuery;
+    }
+};
+// Generate SQL query for search and filter (Assignments)
+export const generateQuerySearchFilterAssignment = (keyword, query) => {
+    if (keyword) {
+        const keywords = keyword.split(" ");
+        const conditionClauses = keywords
+            .map(
+                (kw) =>
+                    `full_name COLLATE utf8mb4_unicode_520_ci LIKE '%${kw}%'`
+            )
+            .join(" AND ");
 
-    return sqlQuery;
+        const sqlQuery = `SELECT a.username, subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid WHERE ${conditionClauses}`;
+        return sqlQuery;
+    } else {
+        const sqlQuery = `SELECT a.username , subquery.uid, subquery.is_public, subquery.description, subquery.name, subquery.full_name FROM 
+        (${query}) AS subquery JOIN account a ON subquery.creator_uid = a.uid`;
+        return sqlQuery;
+    }
 };
 // Count matching score
-export const countMatching = (keyWord, Target) => {
+export const countMatching = (keyword, target) => {
+    // Xử lý
+    keyword = keyword.toLowerCase();
+    target = target.toLowerCase();
     // Tách chuỗi thành mảng
-    const a = keyWord.split(" ");
-    const b = Target.split(" ");
+    const a = keyword.split(" ");
+    const b = target.split(" ");
 
     // Xử lý thuật toán trên mảng
     const lenA = a.length;
@@ -50,7 +88,7 @@ export const countMatching = (keyWord, Target) => {
     // Bắt cặp từ một phần tử ở mảng a với một phần tử ở mảng b
     for (let i = 0; i < lenA; i++) {
         for (let j = 0; j < lenB; j++) {
-            if (a[i] == b[j])
+            if (b[j].includes(a[i]))
                 // Nếu 2 phần tử giống nhau thì tăng đếm
                 count++;
         }
@@ -109,19 +147,22 @@ export const challengeResult = (clientData, systemData) => {
 
         if (systemQuestion) {
             if (
-                arraysEqual(question.userAnswer, systemQuestion.correctAnswers)
+                arraysEqual(
+                    question.clientAnswer,
+                    systemQuestion.correctAnswers
+                )
             ) {
                 result.totalCorrect++;
                 result.correctQuestions.push({
-                    question_uid: question.question_uid,
+                    question_uid: systemQuestion.question_uid,
                     correctAnswer: systemQuestion.correctAnswers,
                 });
             } else {
                 result.totalWrong++;
                 result.wrongQuestions.push({
-                    question_uid: question.question_uid,
+                    question_uid: systemQuestion.question_uid,
                     correctAnswer: systemQuestion.correctAnswers,
-                    userAnswer: question.userAnswer,
+                    clientAnswer: question.clientAnswer,
                 });
             }
         }
@@ -129,3 +170,30 @@ export const challengeResult = (clientData, systemData) => {
 
     return result;
 };
+// Get unique fields of object and array
+// export const extractUniqueFields = (arr) => {
+//     const uniqueFields = new Set();
+
+//     function getFields(obj) {
+//         if (typeof obj !== "object" || obj === null) {
+//             return;
+//         }
+
+//         for (const key in obj) {
+//             if (Object.prototype.hasOwnProperty.call(obj, key)) {
+//                 if (!Number.isNaN(Number(key))) {
+//                     // Skip array indices
+//                     getFields(obj[key]);
+//                 } else {
+//                     uniqueFields.add(key);
+//                     getFields(obj[key]);
+//                 }
+//             }
+//         }
+//     }
+
+//     arr.forEach((obj) => {
+//         getFields(obj);
+//     });
+//     return Array.from(uniqueFields);
+// };

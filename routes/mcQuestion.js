@@ -1,50 +1,48 @@
 import express from "express";
-import db from "../models/db.js";
-// Utils
-import {
-    removeVietnameseDiacritics,
-    generateQuerySearchFilter,
-    countMatching,
-    removeSpecialCharactersAndTrim,
-} from "../utils/utils.js";
-// Middleware
-import {
-    checkValidToken,
-    checkEmptyData,
-    checkQuestionExistent,
-    checkFilterEmpty,
-    checkLimitOfMCQ,
-} from "../middleware/mcQuestionMiddleware.js";
-// Controller
-import {
-    handleCreateMCQ,
-    handleDeleteMCQ,
-    handleUpdateMCQ,
-    handleSearchAndFilterMCQ,
-    handleDetailOneMCQ,
-} from "../controllers/mcQuestionController.js";
-
 const router = express.Router();
-// API create Multiple choice question
+// Middleware
+import * as commonMiddleware from "../middleware/commonMiddleware.js";
+import * as questionMiddleware from "../middleware/mcQuestionMiddleware.js";
+// // Controllers
+import * as questionController from "../controllers/mcQuestionController.js";
+
+// API create multiple choice questions
 router.post(
     "/create-multiple-choice",
-    [checkValidToken, checkEmptyData, checkLimitOfMCQ],
-    handleCreateMCQ
+    [
+        commonMiddleware.authentication,
+        commonMiddleware.checkEmptyData,
+        questionMiddleware.checkLimitOfMCQ,
+    ],
+    questionController.handleCreateMCQ
 );
 // API delete a question (soft-delete)
 router.delete(
-    "/delete/:id",
-    [checkValidToken, checkQuestionExistent],
-    handleDeleteMCQ
+    "/:id",
+    [commonMiddleware.authentication, questionMiddleware.checkQuestionExistent],
+    questionController.handleDeleteMCQ
 );
 // API update a question
-router.put("/edit/:id", [checkValidToken, checkEmptyData], handleUpdateMCQ);
-
-// API get questions by search and filter
-router.get("/search", [checkValidToken], handleSearchAndFilterMCQ);
-
+router.put(
+    "/:id",
+    [
+        commonMiddleware.authentication,
+        commonMiddleware.checkEmptyData,
+        questionMiddleware.checkQuestionExistent,
+    ],
+    questionController.handleUpdateMCQ
+);
+// API get questions by search and filter (Role: Creator)
+router.get(
+    "/search",
+    [commonMiddleware.authentication],
+    questionController.handleSearchAndFilterMCQ
+);
 // API display detail a question including its answers
-router.get("/:id", [checkValidToken], handleDetailOneMCQ);
+router.get(
+    "/:id",
+    [commonMiddleware.authentication, questionMiddleware.checkQuestionExistent],
+    questionController.handleDetailOneMCQ
+);
 
-// Export router
 export default router;

@@ -1,11 +1,11 @@
 import db from "../models/db.js";
 
 // Check challenge existent
-export const checkChallengeExistent = async (req, res, next) => {
+export const checkAssignmentExistent = async (req, res, next) => {
     try {
-        const challenge_uid = req.params?.id;
+        const assignment_uid = req.params?.id;
         const userId = req?.userId;
-        const query = `SELECT * FROM challenge WHERE uid = '${challenge_uid}' AND creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
+        const query = `SELECT * FROM assignment WHERE uid = '${assignment_uid}' AND creator_uid = UUID_TO_BIN('${userId}') AND is_deleted = '0'`;
         const [result, fields] = await db.execute(query);
         if (result?.length != 0) {
             req.data = result[0];
@@ -13,7 +13,7 @@ export const checkChallengeExistent = async (req, res, next) => {
         } else {
             return res.status(401).json({
                 status: "fail",
-                message: "Challenge is not existent",
+                message: "Assignment is not existent",
             });
         }
     } catch (error) {
