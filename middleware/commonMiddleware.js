@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import db from "../models/db.js";
-// import { stringify as uuidStringify } from "uuid";
 
 // Middleware for checking valid provided token from client
 export const authentication = async (req, res, next) => {
