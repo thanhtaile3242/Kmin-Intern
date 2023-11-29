@@ -41,6 +41,7 @@ export const handleSignIn = async (req, res) => {
     try {
         const { user, body } = req;
         const username = user.username;
+        const email = user.email;
         const maxAttempts = 5;
         const lockoutTime = 120;
         const lockoutKey = `lockout: ${username}`;
@@ -71,13 +72,44 @@ export const handleSignIn = async (req, res) => {
         const isMatch = await bcrypt.compare(body.password, user.password);
         if (isMatch) {
             await redis.del(attemptsKey);
-            const parseUUID = uuidStringify(user.uid);
-            const token = jwt.sign({ userId: parseUUID }, "LTT-secret-key");
+            //
+            const access_token = jwt.sign(
+                { username, email },
+                "LTT-secret-key-access",
+                { expiresIn: "1h" }
+            );
+            //
+            const refresh_token = jwt.sign(
+                { username, email },
+                "LTT-secret-key-refresh",
+                { expiresIn: "3h" }
+            );
+            // Lưu refresh token vào database
+            try {
+                await db.beginTransaction();
+                const queryRF = `UPDATE account SET refresh_token = '${refresh_token}' WHERE email = '${email}'`;
+                await db.execute(queryRF);
+                await db.commit();
+            } catch (error) {
+                await db.rollback();
+                console.error(error);
+                return res.status(500).json({
+                    status: "error",
+                    message: "Internal server error",
+                });
+            }
+            // Set refresh_token as Cookie
+            res.cookie("refresh_token", refresh_token, {
+                httpOnly: true,
+                maxAge: 3600 * 3 * 1000,
+            });
+            //
             return res.status(200).json({
                 status: "success",
                 message: "Sign in successfully",
                 username: user.username,
-                token: token,
+                mail: user.email,
+                access_token: access_token,
             });
         } else {
             let attempts = await redis.incr(attemptsKey);
@@ -98,3 +130,4 @@ export const handleSignIn = async (req, res) => {
         });
     }
 };
+// Controller for API account

@@ -1,4 +1,4 @@
-import { crypto } from "crypto-js";
+import crypto from "crypto";
 
-const token = crypto.randomBytes(20).toString("hex");
+const token = crypto.randomBytes(32).toString("hex");
 console.log(token);

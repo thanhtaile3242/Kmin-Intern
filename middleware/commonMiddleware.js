@@ -1,21 +1,21 @@
 import jwt from "jsonwebtoken";
 import db from "../models/db.js";
-import { stringify as uuidStringify } from "uuid";
+// import { stringify as uuidStringify } from "uuid";
 
 // Middleware for checking valid provided token from client
 export const authentication = async (req, res, next) => {
     try {
         // Get the 'Authorization' key from header
-        const authHeader = req.headers.authorization;
+        const bearerToken = req.headers.authorization;
         // Check the received token
-        if (!authHeader) {
+        if (!bearerToken) {
             return res.status(401).json({
                 status: "fail",
-                message: "No token provided",
+                message: "No access_token provided",
             });
         }
 
-        const tokenParts = authHeader.split(" ");
+        const tokenParts = bearerToken.split(" ");
         if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
             return res.status(401).json({
                 status: "fail",
@@ -23,9 +23,12 @@ export const authentication = async (req, res, next) => {
             });
         }
 
-        const tokenValue = tokenParts[1];
-        // Verify and Decode Creator UID from token using async/await
-        const decodedData = await jwt.verify(tokenValue, "LTT-secret-key");
+        const access_token = tokenParts[1];
+        // Verify and Decode Creator UID from access_token using async/await
+        const decodedData = await jwt.verify(
+            access_token,
+            "LTT-secret-key-access"
+        );
         // Attach userId to req object
         req.userId = decodedData.userId;
         next();
