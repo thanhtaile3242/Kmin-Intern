@@ -40,10 +40,7 @@ router.get(
 // API detail an assignment and its challenges
 router.get(
     "/:id",
-    [
-        commonMiddleware.authentication,
-        assignmentMiddleware.checkAssignmentExistent,
-    ],
+    [commonMiddleware.authentication],
     assignmentController.handleDetailAssignment
 );
 

@@ -1,17 +1,20 @@
-// Trường hợp 2: newList < currentList
-let newList = [
-    { id: 1, name: "a" },
-    { id: 2, name: "a" },
-];
+const arraysEqual = (a, b) => {
+    if (a.length !== b.length) return false;
 
-let currentList = [
-    { id: 1, name: "a" },
-    { id: 2, name: "a" },
-    { id: 3, name: "a" },
-    { id: 4, name: "a" },
-];
+    let aSet = new Set(a);
+    let bSet = new Set(b);
 
-const uniqueIds_New = new Set(newList.map((item) => item.id));
-const deletedList = currentList.filter((item) => !uniqueIds_New.has(item.id));
-console.log(uniqueIds_New);
-console.log(deletedList); // id = 3 và id = 4
+    if (aSet.size !== bSet.size) return false;
+
+    for (let item of aSet) {
+        const aCount = a.filter((val) => val === item).length;
+        const bCount = b.filter((val) => val === item).length;
+        if (aCount !== bCount || !bSet.has(item)) return false;
+    }
+
+    return true;
+};
+const a = ["a1", "a3", "a6"];
+const b = ["a2", "a1", "a6"];
+
+console.log(arraysEqual(a, b));

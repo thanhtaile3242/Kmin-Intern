@@ -375,18 +375,17 @@ export const handleIntroduceOneChallene = async (req, res) => {
 // Controller for API get result when submit a challenge
 export const handleSumbitChallange = async (req, res) => {
     // Get data
-    const userId = req.userId;
     const clientData = req.body[0];
     const challenge_uid = req.body[0].challenge_uid;
     try {
         // Get a challenge
         const queryC = `SELECT uid, description FROM challenge WHERE uid = '${challenge_uid}' AND is_deleted = '0'`;
         const [resultC] = await db.execute(queryC);
-
         if (resultC?.length === 0) {
+            console.log(challenge_uid);
             return res.status(404).json({
                 status: "fail",
-                message: "Challenge not found",
+                message: "Challenge not found!!!!",
             });
         }
 
@@ -402,21 +401,18 @@ export const handleSumbitChallange = async (req, res) => {
             const [resultA] = await db.execute(queryA);
             resultC[0].questions[i].answers = resultA;
         }
-
         // System Correct
         const listQuestions = resultC[0]?.questions;
         const systemCorrect = listQuestions?.map((question) => ({
             question_uid: question?.uid,
             correctAnswers: question?.answers?.map((answer) => answer?.uid),
         }));
-
         // Create System Data
         const systemData = {
             challenge_uid: resultC[0]?.uid,
             challenge_description: resultC[0]?.description,
             systemAnswers: systemCorrect,
         };
-
         // Get the result of the challenge
         const finalResult = utils.challengeResult(clientData, systemData);
 
