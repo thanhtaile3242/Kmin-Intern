@@ -40,29 +40,19 @@ router.get(
 // API detail a challenge and its questions
 router.get(
     "/:id",
-    [
-        commonMiddleware.authentication,
-        challengeMiddleware.checkChallengeExistent,
-    ],
+    [commonMiddleware.authentication],
     challengeController.handleDetailOneChallenge
 );
 // API introduce a challenge (display maximum 3 questions)
 router.get(
     "/introduce/:id",
-    [
-        commonMiddleware.authentication,
-        challengeMiddleware.checkChallengeExistent,
-    ],
+    [commonMiddleware.authentication],
     challengeController.handleIntroduceOneChallene
 );
-// API get result of a challenge
+// API submit a challenge
 router.post(
     "/submit",
-    [
-        commonMiddleware.authentication,
-        commonMiddleware.checkEmptyData,
-        challengeMiddleware.checkChallengeExistent,
-    ],
+    [commonMiddleware.authentication, commonMiddleware.checkEmptyData],
     challengeController.handleSumbitChallange
 );
 
