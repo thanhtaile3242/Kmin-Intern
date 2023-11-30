@@ -1,5 +1,7 @@
+import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import db from "../models/db.js";
+dotenv.config({ path: "../.env" });
 
 // Middleware for checking valid provided token from client
 export const authentication = async (req, res, next) => {
@@ -26,7 +28,7 @@ export const authentication = async (req, res, next) => {
         // Verify and Decode Creator UID from access_token using async/await
         const decodedData = await jwt.verify(
             access_token,
-            "LTT-secret-key-access"
+            process.env.ACCESSTOKENKEY
         );
         // Attach userId to req object
         req.userId = decodedData?.userId;
